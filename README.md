@@ -1,111 +1,115 @@
-# SilkroadFights
-Turn-based 1v1 PvP with a story-driven solo mode as the first alpha.
+SILKROAD Fights
+The ultimate turn-based PvP strategy game where cunning and strategy meet on the Silkroad.
 
-Game Objective
-Trader (Player 1):
-Collect two Gold pieces and deliver them to the designated goal zones (A3, A6).
-Protect your team (2 Traders and 1 Hunter) while navigating through enemy attacks and Boss threats.
-Thief (Player 2 or AI):
-Prevent Traders from delivering Gold by eliminating them.
-Secure Gold for the Thieves by returning it to the Thief base zones (H3, H6).
-Use stealth, ambushes, and the superior strength of the Kingthief to dominate.
-Gameplay Mechanics
-Board Setup
-8x8 grid, labeled A1 (bottom-left) to H8 (top-right).
-Fixed positions for Gold: H3, H6.
-Silk spawns randomly, with a maximum of 3 Silk tiles on the board.
-Central area (C4–F5) serves as the potential spawn zone for Bosses.
-Starting Positions
-Trader Side:
-Trader 1: A2
-Trader 2: A7
-Hunter: B4
-Thief Side:
-Thief 1: H2
-Thief 2: H7
-Kingthief: G4
-Character Mechanics
-Trader Side
-Traders:
+Game Concept
+Welcome to Silkroad Fights, a dynamic 1v1 strategy game played on an 8x8 board. Players take control of either Shadow Thieves or Golden Traders, each with unique abilities and victory conditions. The objective? Outwit and outmaneuver your opponent, leveraging resources like Gold, Silk, and powerful Boss mechanics to claim victory.
 
-Movement: 1 tile per turn (2 tiles with "Rush").
-Gold Handling:
-Can pick up Gold from H3/H6 or reclaim it from a Thief.
-Can deliver only 1 Gold piece at a time to goal zones.
-Abilities:
-Rush: Move 2 tiles in one turn (cost: 1 Silk).
-Shield Wall: Grants 1 round of immunity to damage (cost: 2 Silk).
-Fortify: Increases HP of both Traders for 2 rounds (cost: 3 Silk).
-Hunter:
-
-Movement: 1 tile per turn.
-Attack: Can target Thieves but not Bosses.
-Gold Handling: Can only pick up Gold dropped by Thieves.
-Thief Side
-Thieves:
-
-Movement: 1 tile per turn (2 tiles with "Sprint").
-Gold Handling:
-Can pick up Gold and deliver it to H3/H6.
-If Gold is delivered to the Thief base, it’s lost to Traders.
-Abilities:
-Ambush: Places a trap to block movement (cost: 1 Silk).
-Disarm: Disables an active Trader ability (cost: 2 Silk).
-Shadowstep: Moves through obstacles or units (cost: 3 Silk).
-Kingthief:
-
-Damage: Double damage to Traders, regular damage to Hunter.
-Tank Role: Higher HP than regular Thieves.
-Boss Mechanics
-Spawn every 10 rounds in the central area (C4–F5).
-Bosses attack the nearest unit (Trader, Thief, or Hunter).
-Each Boss has unique abilities and movement patterns:
-Tiger Giry: High-speed movement and AoE damage.
-Skeleto King: Summons skeleton minions and absorbs Silk.
-Murucha: High defense with counterattack capabilities.
-Rewards: Defeating a Boss grants Silk and temporary stat boosts.
 Victory Conditions
-Trader Victory:
-Successfully deliver both Gold pieces to A3 and A6.
-Survive Boss attacks and evade Thieves.
-Thief Victory:
-Eliminate both Traders.
-Deliver stolen Gold to H3 or H6.
-Prevent Gold delivery by controlling the board.
-Silk Mechanics
-Spawn: Randomly on empty tiles, max 3 Silk tiles at a time.
-Collection: Any character can collect Silk by moving onto the tile.
-Usage: Silk powers abilities unique to each side.
-Balance: Silk availability ensures a balance of power between the factions.
-Round System
-Each player takes turns moving one character or using one ability.
-Combat occurs if units from opposing sides collide.
-Bosses act after both players' turns, targeting the nearest unit.
-Bug Prevention Checklist
-Round Logic: Ensure smooth transitions between turns.
-Gold Handling:
-Gold must drop on the correct tile when a Trader dies.
-Only valid units can pick up Gold.
-Silk Spawning: Prevent over-spawning or Silk on occupied tiles.
-Combat System:
-Damage calculation must follow rules (e.g., Kingthief's double damage).
-End turn after combat.
-Boss Mechanics:
-Bosses should only spawn in designated areas.
-Ensure fair targeting logic for Boss attacks.
-Victory Conditions: Verify that win/loss scenarios trigger correctly.
-Ability Usage:
-Validate sufficient Silk before ability activation.
-Prevent multiple ability uses in one turn.
-Future Improvements
-Add customizable skins and items via an in-game shop.
-Integrate blockchain wallets for premium item purchases.
-Develop a PvP matchmaking system for ranked play.
-Expand Boss library for greater replayability.
-Introduce new factions or special units for deeper strategy.
-Setup Instructions
-Clone this repository and run the project locally.
-Refer to the included files for the base HTML structure and mechanics.
-Use placeholder assets for visuals during initial testing.
-Implement all mechanics step by step, ensuring balance and functionality.
-This README serves as a comprehensive guide for implementing and understanding the game mechanics of Trader vs Thief.
+Golden Traders Win:
+Deliver 2 Gold pieces to the designated Trader zone on the board.
+If both Gold pieces are carried to the zone, the Traders secure victory.
+
+Shadow Thieves Win:
+Eliminate both Trader units before they can deliver their Gold.
+If only the Hunter remains alive, the Thieves automatically win.
+
+Board Setup
+The game is played on an 8x8 grid, each tile representing a battlefield square.
+Starting Positions:
+Traders: A1, B1
+Hunter: C1
+Thieves: H3, H6
+Gold: G4, G7
+Silk Spawns: Randomly at the beginning of each round (3 empty tiles).
+Gameplay Mechanics
+Player Turns
+Each player alternates turns.
+On a turn, a player can move one unit and use one ability (if resources allow).
+Movement and abilities are constrained by the unit’s range and available resources.
+Movement
+Traders: Move 1 tile per turn.
+Hunter: Moves up to 2 tiles per turn.
+Thieves: Move 1 tile per turn (can sprint 2 tiles using abilities).
+Bosses: Special movement logic (see Boss section).
+Resources
+Gold
+Found on fixed tiles (G4, G7).
+Only Traders can carry Gold.
+If a Trader carrying Gold dies, the Gold drops on their tile.
+The Hunter can reclaim dropped Gold from a Thief by defeating them but cannot carry it otherwise.
+Silk
+Spawns randomly on 3 empty tiles at the beginning of each round.
+Used to activate abilities:
+Shadow Thieves: Shadowstep, Steal, Trap
+Golden Traders: Rush, Trade, Shield
+Abilities
+Golden Trader Abilities:
+Rush (2 Silk): Move up to 2 tiles in one turn.
+Trade (3 Silk): Swap positions with another Trader unit.
+Shield (3 Silk): Activate a shield for 1 turn to block incoming damage.
+Shadow Thief Abilities:
+Shadowstep (2 Silk): Move to any adjacent empty tile, bypassing obstacles.
+Steal (3 Silk): Steal 1 Silk from the opponent’s reserve.
+Trap (2 Silk): Place a trap on an adjacent tile to deal damage to opponents.
+Boss Mechanics
+Every 10 rounds, a powerful Boss spawns on the board to disrupt the battlefield:
+Tiger Giry:
+Deals AoE damage to all units in a 3x3 area.
+Prioritizes the nearest unit.
+Skeletoking:
+Spawns skeleton minions on adjacent tiles.
+Murucha:
+Releases a poison cloud affecting units within 2 tiles (damage over time).
+Combat System
+Engage Combat:
+
+Combat is triggered when units move into the same tile.
+Damage Rules:
+
+Thieves: Deal 1 damage per attack.
+Kingthief: Deals 2 damage to Traders, 1 to Hunters.
+Hunter: Can only attack Thieves or Bosses.
+Turn-Based Combat:
+
+Each unit may attack once per turn.
+A health bar below each unit displays remaining health.
+Dice Rolls:
+
+Combat outcomes are determined by a best-of-3 dice roll.
+Units with abilities (e.g., Shield) may gain additional bonuses.
+Key Features for Development
+Game Logic:
+Fix turn-based mechanics to ensure proper alternation of turns.
+Validate combat rules and prevent interactions after unit death.
+Resource Handling:
+Ensure Silk spawns on empty tiles.
+Allow Gold to drop and be reclaimed under the defined conditions.
+Boss Logic:
+Implement spawning rules every 10 rounds.
+Define Boss movement and targeting priorities.
+Victory Logic:
+Traders win when both Gold pieces are delivered.
+Thieves win if both Traders are eliminated.
+Planned Improvements
+Story Mode:
+
+Play through a campaign with unique Boss encounters.
+PvP Multiplayer:
+
+Competitive 1v1 matches with ranked matchmaking.
+Customizations:
+
+Unlock Skins and Icons for units using Silk or in-game achievements.
+Dynamic AI:
+
+Implement three difficulty levels for AI (Easy, Normal, Hard).
+Adjust AI behavior to prioritize victory conditions.
+Potential Bugs to Monitor
+Ensure turn order is respected.
+Prevent multiple units from occupying the same tile.
+Fix health bars to update dynamically during combat.
+Ensure dead units are removed from the board and cannot act further.
+How to Play
+Choose your faction: Traders or Thieves.
+Plan your moves: Use abilities and resources strategically.
+Claim victory: Complete your faction’s objectives before your opponent does.
