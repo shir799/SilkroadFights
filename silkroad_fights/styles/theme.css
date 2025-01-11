@@ -1,0 +1,47 @@
+:root {
+  --gold-gradient: linear-gradient(to bottom, #ffd700, #b8860b);
+  --brown-gradient: linear-gradient(to bottom, #8b4513, #654321);
+  --dark-gradient: linear-gradient(to bottom, #2d2d2d, #1a1a1a);
+}
+
+.medieval-button {
+  background: var(--gold-gradient);
+  border: 2px solid #b8860b;
+  border-radius: 4px;
+  color: #2d2d2d;
+  font-family: 'Cinzel', serif;
+  font-weight: bold;
+  padding: 8px 16px;
+  text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.medieval-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.medieval-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.medieval-panel {
+  background: rgba(45, 45, 45, 0.95);
+  border: 2px solid #b8860b;
+  border-radius: 8px;
+  color: #ffd700;
+  padding: 16px;
+}
+
+.game-title {
+  font-family: 'Cinzel', serif;
+  font-size: 2.5rem;
+  color: #ffd700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
