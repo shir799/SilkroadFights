@@ -101,7 +101,7 @@ export function BossAnnouncement({ bossType, onClose, isDefeat = false }: BossAn
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.8 }}
             >
-              {isDefeat ? dialogue.text : dialogue.battleCry}
+              {isDefeat ? dialogue.text : (dialogue as any).battleCry}
             </motion.div>
 
             {/* Content */}
@@ -124,7 +124,7 @@ export function BossAnnouncement({ bossType, onClose, isDefeat = false }: BossAn
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.6 }}
               >
-                {isDefeat ? dialogue.reward : dialogue.description}
+                {isDefeat ? (dialogue as any).reward : (dialogue as any).description}
               </motion.div>
             </div>
           </div>

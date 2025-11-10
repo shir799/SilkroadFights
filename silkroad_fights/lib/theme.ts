@@ -22,6 +22,7 @@ export const theme = {
     logo: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo-7q5joYEqr6I7lnCVvnIpU33b1Ic3wd.png',
     gold: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/gold-vdQam3idaMrE1Z27PQDzhXF5gwuSyv.png',
     silk: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/silk-vZQHPjDw5GCbrH2f08K7UvsYQCbvsE.png',
+    kingthief: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/kingthief-ELevBdvYg2EBX9YEu4ESdlXEabyskF.png',
     kingThief: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/kingthief-ELevBdvYg2EBX9YEu4ESdlXEabyskF.png',
     thief: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Thief.png-hyVXxRC4m0a3B2MWEG2b2tlzpLkvCe.webp',
     trap: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/trap.png-FLsHAaqx9V7kGZ6u5yFbRkT8QXx5fB.webp',
@@ -30,6 +31,6 @@ export const theme = {
     murucha: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/maracha.png-uTti0RpeOgiQP5K9CUhCMRLkcbsie0.webp',
     skeletoking: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/skeletonking.png-T35NoP83bJDMf09TUK8DY3949cVZAq.webp',
     tigergiry: 'https://hebbkx1anhila5yf.public.blob.vercel-storage.com/tigergiry.png-AZjsfzPqffCZRxICDn8MS1pA5Ve6yW.webp'
-  }
-}
+  } as Record<string, string>
+} as const
 

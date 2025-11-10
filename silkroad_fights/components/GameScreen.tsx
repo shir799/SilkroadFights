@@ -201,8 +201,8 @@ export default function GameScreen({ gameMode, aiDifficulty, isMuted, setIsMuted
 
         {showDice && gameState.combatResult && (
           <DiceRoll
-            attackRoll={gameState.combatResult.attackRoll}
-            defenseRoll={gameState.combatResult.defenseRoll}
+            attackRoll={gameState.combatResult.attackRoll[0]}
+            defenseRoll={gameState.combatResult.defenseRoll[0]}
             attacker={gameState.combatResult.attacker}
             defender={gameState.combatResult.defender}
             attackerHp={gameState.combatResult.attackerHp}

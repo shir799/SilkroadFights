@@ -1,4 +1,5 @@
 import { BossMonster, CombatResult, GameState, Unit, Position } from './types';
+export type { GameState, Unit, Position, BossMonster, CombatResult };
 
 export const BOARD_SIZE = 8;
 const SILK_SPAWN_INTERVAL = 3;
@@ -291,7 +292,7 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
 export function useAbility(gameState: GameState, ability: string, targetPosition?: { row: number, col: number }): GameState {
   const newGameState = { ...gameState };
   const currentPlayer = newGameState.currentPlayer;
-  const unitArray = newGameState.traderUnits;
+  const unitArray = currentPlayer === 'TRADER' ? newGameState.traderUnits : newGameState.thiefUnits;
 
   switch (ability) {
     case 'Rush':
@@ -351,7 +352,12 @@ export function useAbility(gameState: GameState, ability: string, targetPosition
   }
 
   // Use silk to activate ability
-  newGameState.silkCountTrader -= getAbilityCost(ability);
+  const abilityCost = getAbilityCost(ability);
+  if (currentPlayer === 'TRADER') {
+    newGameState.silkCountTrader -= abilityCost;
+  } else {
+    newGameState.silkCountThief -= abilityCost;
+  }
 
   newGameState.lastUsedAbility = ability;
   return newGameState;
@@ -413,7 +419,7 @@ function resolveCombat(gameState: GameState, attackerPos: Position, defenderPos:
 
   let attackerWins = 0;
   let defenderWins = 0;
-  const rolls = { attacker: [], defender: [] };
+  const rolls = { attacker: [] as number[], defender: [] as number[] };
 
   for (let i = 0; i < 3; i++) {
     const attackRoll = rollDice() + getCombatModifier(gameState, attackerUnit);
