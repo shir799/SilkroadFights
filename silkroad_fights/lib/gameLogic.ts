@@ -193,10 +193,13 @@ function isValidMove(gameState: GameState, from: Position, to: Position): boolea
   const unit = gameState.board[from.row][from.col];
   const targetCell = gameState.board[to.row][to.col];
 
-  // Check for traps
-  if (gameState.traps.some(trap => trap.row === to.row && trap.col === to.col)) {
+  // Check for traps - Traders can step on traps (will be damaged), Thieves can't step on their own traps
+  const isTrap = gameState.traps.some(trap => trap.row === to.row && trap.col === to.col);
+  if (isTrap && gameState.currentPlayer === 'THIEF') {
+    // Thieves can't walk on their own traps
     return false;
   }
+  // Traders CAN walk on traps (they will be damaged)
 
   // Check for friendly units
   if ((gameState.currentPlayer === 'TRADER' && (targetCell.includes('TR') || targetCell.includes('H'))) ||
@@ -204,9 +207,23 @@ function isValidMove(gameState: GameState, from: Position, to: Position): boolea
     return false;
   }
 
-  // Check for boss monsters
-  if (gameState.bossMonsters.some(boss => boss.position.row === to.row && boss.position.col === to.col)) {
+  // Hunter can only attack Thieves and Bosses (not empty cells or gold)
+  if (unit.includes('H') && targetCell !== '' && !targetCell.includes('TH') && !targetCell.includes('KT') && !targetCell.includes('BM')) {
+    // Allow moving to silk
+    if (targetCell === 'SI') {
+      return true;
+    }
+    // Allow moving to traps (will be damaged)
+    if (targetCell === 'X') {
+      return true;
+    }
+    // Don't allow moving to gold zones or other non-combat targets
     return false;
+  }
+
+  // Check for boss monsters - can be attacked by any unit
+  if (gameState.bossMonsters.some(boss => boss.position.row === to.row && boss.position.col === to.col)) {
+    return true; // Allow attacking bosses
   }
 
   // Special case for Shadowstep ability
@@ -258,16 +275,56 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
     if (combatResult.defenderHp <= 0) {
       const defender = findUnit(newGameState, to);
       if (defender?.hasGold) {
+        // Gold drops at defender's position
         newGameState.droppedGold.push({ row: to.row, col: to.col });
+        defender.hasGold = false;
       }
       removeUnit(newGameState, to);
     }
     if (combatResult.attackerHp <= 0) {
       const attacker = findUnit(newGameState, from);
       if (attacker?.hasGold) {
+        // Gold drops at attacker's position
         newGameState.droppedGold.push({ row: from.row, col: from.col });
+        attacker.hasGold = false;
       }
       removeUnit(newGameState, from);
+    }
+  }
+
+  // Hunter can reclaim dropped gold from defeated Thieves
+  if (movingUnit.includes('H') && targetCell.includes('TH') && newGameState.combatResult?.winner === 'attacker') {
+    const droppedGoldIndex = newGameState.droppedGold.findIndex(g => g.row === to.row && g.col === to.col);
+    if (droppedGoldIndex !== -1) {
+      // Gold is reclaimed - it will appear at the dropped location for Traders to pick up
+      // Hunter doesn't carry it, just prevents Thieves from having it
+    }
+  }
+
+  // Handle trap activation
+  if (targetCell === 'X') {
+    const movingUnitObj = findUnit(newGameState, from);
+    if (movingUnitObj) {
+      // Trap deals 1 damage
+      movingUnitObj.hp -= 1;
+      if (movingUnitObj.hp <= 0) {
+        if (movingUnitObj.hasGold) {
+          newGameState.droppedGold.push({ row: to.row, col: to.col });
+        }
+        removeUnit(newGameState, from);
+        newGameState.board[from.row][from.col] = '';
+        // Remove trap
+        const trapIndex = newGameState.traps.findIndex(t => t.row === to.row && t.col === to.col);
+        if (trapIndex !== -1) {
+          newGameState.traps.splice(trapIndex, 1);
+        }
+        return newGameState; // Unit died on trap, end move
+      }
+    }
+    // Remove trap after activation
+    const trapIndex = newGameState.traps.findIndex(t => t.row === to.row && t.col === to.col);
+    if (trapIndex !== -1) {
+      newGameState.traps.splice(trapIndex, 1);
     }
   }
 
@@ -308,9 +365,17 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
     }
   }
 
-  // Handle boss spawning
-  if (newGameState.roundNumber % BOSS_SPAWN_INTERVAL === 0) {
+  // Update buffs and debuffs durations
+  updateBuffsAndDebuffs(newGameState);
+
+  // Update game state
+  newGameState.currentPlayer = newGameState.currentPlayer === 'TRADER' ? 'THIEF' : 'TRADER';
+  newGameState.roundNumber++;
+
+  // Handle boss spawning (only once per round interval)
+  if (newGameState.roundNumber >= newGameState.nextBossSpawn && newGameState.bossMonsters.length === 0) {
     spawnBoss(newGameState);
+    newGameState.nextBossSpawn = newGameState.roundNumber + BOSS_SPAWN_INTERVAL;
   }
 
   // Handle silk spawning
@@ -321,13 +386,6 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
     }
     newGameState.nextSilkSpawn = newGameState.roundNumber + SILK_SPAWN_INTERVAL;
   }
-
-  // Update buffs and debuffs durations
-  updateBuffsAndDebuffs(newGameState);
-
-  // Update game state
-  newGameState.currentPlayer = newGameState.currentPlayer === 'TRADER' ? 'THIEF' : 'TRADER';
-  newGameState.roundNumber++;
 
   return newGameState;
 }
