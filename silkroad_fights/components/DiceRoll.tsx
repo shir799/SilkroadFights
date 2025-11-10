@@ -6,8 +6,8 @@ import { theme } from '../lib/theme'
 import { HealthBar } from './HealthBar'
 
 interface DiceRollProps {
-  attackRoll: number
-  defenseRoll: number
+  attackRoll: number[]
+  defenseRoll: number[]
   attacker: string
   defender: string
   attackerHp: number
@@ -47,9 +47,12 @@ export function DiceRoll({
       // Final values at the end
       if (elapsed >= animationDuration - rollSpeed) {
         clearInterval(rollInterval);
+        // Use the best roll from the 3 rolls
+        const bestAttack = Math.max(...attackRoll);
+        const bestDefense = Math.max(...defenseRoll);
         setCurrentRoll({
-          attack: attackRoll,
-          defense: defenseRoll
+          attack: bestAttack,
+          defense: bestDefense
         });
         
         setTimeout(() => {

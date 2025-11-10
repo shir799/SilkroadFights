@@ -33,7 +33,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ board, selectedUnit, validMoves, 
                 hover:opacity-90 transition-opacity
               `}
               style={{
-                background: getCellBackground(cell, boss),
+                background: getCellBackground(cell, boss, rowIndex, colIndex),
                 border: '1px solid rgba(139, 69, 19, 0.5)',
                 aspectRatio: '1 / 1',
               }}
@@ -61,11 +61,20 @@ const GameBoard: React.FC<GameBoardProps> = ({ board, selectedUnit, validMoves, 
   )
 }
 
-function getCellBackground(cell: string, boss: BossMonster | undefined): string {
+function getCellBackground(cell: string, boss: BossMonster | undefined, rowIndex?: number, colIndex?: number): string {
   if (boss) {
     return 'rgba(255, 165, 0, 0.3)' // Orange tint for boss cells
   }
-  if (cell.includes('Z')) return 'rgba(255, 215, 0, 0.3)'
+
+  // Highlight delivery zones (A1 and B1 = row 7, col 0 and 1)
+  if (rowIndex === 7 && (colIndex === 0 || colIndex === 1)) {
+    return 'rgba(0, 255, 0, 0.2)' // Green tint for delivery zones
+  }
+
+  if (cell.includes('Z') || cell.includes('G')) {
+    return 'rgba(255, 215, 0, 0.3)' // Gold tint
+  }
+
   return 'rgba(26, 15, 15, 0.4)'
 }
 
@@ -140,13 +149,21 @@ function renderGamePiece(cell: string, boss: BossMonster | undefined) {
     );
   }
 
-  if (cell.includes('Z')) {
+  if (cell.includes('Z') || cell.includes('G')) {
     return (
-      <img 
+      <img
         src={theme.images.gold}
-        alt="Goal"
+        alt="Gold"
         className={commonImageClasses}
       />
+    );
+  }
+
+  if (cell.includes('SK')) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-white text-xs font-bold">SK</div>
+      </div>
     );
   }
 

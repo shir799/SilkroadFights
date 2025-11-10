@@ -6,26 +6,27 @@ const BOSS_SPAWN_INTERVAL = 10;
 const MAX_SILK_ON_BOARD = 3;
 
 // New constants for game mechanics
+// Board coordinates: Row 0 = H (top), Row 7 = A (bottom), Col 0 = 1 (left), Col 7 = 8 (right)
 const TRADER_DELIVERY_ZONES: Position[] = [
-  { row: 7, col: 2 }, // A3
-  { row: 7, col: 5 }  // A6
+  { row: 7, col: 0 }, // A1 - Trader 1 delivery zone
+  { row: 7, col: 1 }  // B1 - Trader 2 delivery zone
 ];
 
-const THIEF_GOLD_ZONES: Position[] = [
-  { row: 0, col: 2 }, // H3
-  { row: 0, col: 5 }  // H6
+const GOLD_SPAWN_POSITIONS: Position[] = [
+  { row: 3, col: 6 }, // G4 in game notation (row 3 = 5th from bottom, col 6 = G)
+  { row: 6, col: 6 }  // G7 in game notation (row 6 = 2nd from bottom, col 6 = G)
 ];
 
 const STARTING_POSITIONS = {
   TRADER: [
-    { row: 7, col: 1 }, // Trader 1: A2
-    { row: 7, col: 6 }, // Trader 2: A7
-    { row: 6, col: 3 }  // Hunter: B4
+    { row: 7, col: 0 }, // Trader 1: A1
+    { row: 7, col: 1 }, // Trader 2: B1
+    { row: 7, col: 2 }  // Hunter: C1
   ],
   THIEF: [
-    { row: 0, col: 1 }, // Thief 1: H2
-    { row: 0, col: 6 }, // Thief 2: H7
-    { row: 1, col: 3 }  // Kingthief: G4
+    { row: 0, col: 7 }, // Thief 1: H8
+    { row: 5, col: 7 }, // Thief 2: H6 (adjusted)
+    { row: 2, col: 7 }  // Kingthief: H3
   ]
 };
 
@@ -111,9 +112,9 @@ export function initializeGame(gameMode: string): GameState {
     board[unit.row][unit.col] = formatUnit(unit);
   });
 
-  // Place initial gold
-  THIEF_GOLD_ZONES.forEach(({ row, col }) => {
-    board[row][col] = 'Z';
+  // Place initial gold at G4 and G7
+  GOLD_SPAWN_POSITIONS.forEach(({ row, col }) => {
+    board[row][col] = 'G';
   });
 
   // Place initial silk (max 3)
@@ -150,23 +151,34 @@ export function formatUnit(unit: Unit): string {
 export function getValidMoves(gameState: GameState, from: Position): Position[] {
   const validMoves: Position[] = [];
   const unit = gameState.board[from.row][from.col];
-  
+
   // Check if unit is immobilized
   const unitObj = findUnit(gameState, from);
   if (unitObj?.isImmobilized) return [];
 
   // Get base movement range
   let maxDistance = 1; // Default movement of 1 tile
-  
+
+  // Hunter moves 2 tiles per turn
+  if (unit.includes('H')) maxDistance = 2;
+
   // Check for movement-enhancing abilities
-  if (unit.includes('TR') && hasActiveAbility(gameState, 'Rush')) maxDistance = 2;
-  if (unit.includes('TH') && hasActiveAbility(gameState, 'Sprint')) maxDistance = 2;
+  const currentPlayer = gameState.currentPlayer;
+  const playerBuffs = gameState.buffs[currentPlayer];
+
+  if (unit.includes('TR') && playerBuffs.some(buff => buff.type === 'rush')) {
+    maxDistance = 2;
+  }
+
+  if (unit.includes('TH') && playerBuffs.some(buff => buff.type === 'shadowstep')) {
+    maxDistance = 2;
+  }
 
   // Get valid moves within range
   for (let row = Math.max(0, from.row - maxDistance); row <= Math.min(BOARD_SIZE - 1, from.row + maxDistance); row++) {
     for (let col = Math.max(0, from.col - maxDistance); col <= Math.min(BOARD_SIZE - 1, from.col + maxDistance); col++) {
       if (row === from.row && col === from.col) continue;
-      
+
       const distance = Math.abs(row - from.row) + Math.abs(col - from.col);
       if (distance <= maxDistance && isValidMove(gameState, from, { row, col })) {
         validMoves.push({ row, col });
@@ -210,22 +222,30 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
   const movingUnit = newGameState.board[from.row][from.col];
   const targetCell = newGameState.board[to.row][to.col];
 
-  // Handle gold pickup
-  if (targetCell === 'Z' && movingUnit.includes('TR')) {
+  // Handle gold pickup (only Traders can pick up gold)
+  if (targetCell === 'G' && movingUnit.includes('TR')) {
     const unit = findUnit(newGameState, from);
     if (unit && !unit.hasGold) {
       unit.hasGold = true;
-      newGameState.board[to.row][to.col] = formatUnit(unit);
     }
   }
 
-  // Handle gold delivery
+  // Handle dropped gold pickup
+  const droppedGoldIndex = newGameState.droppedGold.findIndex(g => g.row === to.row && g.col === to.col);
+  if (droppedGoldIndex !== -1 && movingUnit.includes('TR')) {
+    const unit = findUnit(newGameState, from);
+    if (unit && !unit.hasGold) {
+      unit.hasGold = true;
+      newGameState.droppedGold.splice(droppedGoldIndex, 1);
+    }
+  }
+
+  // Handle gold delivery (Traders delivering to delivery zones)
   if (movingUnit.includes('TR') && isDeliveryZone(to)) {
     const unit = findUnit(newGameState, from);
     if (unit?.hasGold) {
       unit.hasGold = false;
       newGameState.goldDelivered++;
-      newGameState.board[to.row][to.col] = formatUnit(unit);
     }
   }
 
@@ -262,9 +282,30 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
 
   // Update board state
   if (!newGameState.combatResult || newGameState.combatResult.winner === 'attacker') {
-    newGameState.board[to.row][to.col] = movingUnit;
-    newGameState.board[from.row][from.col] = '';
-    updateUnitPosition(newGameState, from, to);
+    // Get the updated unit to reflect any changes (like hasGold)
+    const updatedUnit = findUnit(newGameState, from);
+    if (updatedUnit) {
+      newGameState.board[to.row][to.col] = formatUnit(updatedUnit);
+      updateUnitPosition(newGameState, from, to);
+    } else {
+      newGameState.board[to.row][to.col] = movingUnit;
+      updateUnitPosition(newGameState, from, to);
+    }
+
+    // Clear the origin cell, but preserve gold if it was there
+    const wasGoldSpawnPoint = GOLD_SPAWN_POSITIONS.some(pos => pos.row === from.row && pos.col === from.col);
+    if (wasGoldSpawnPoint && !targetCell.includes('G')) {
+      newGameState.board[from.row][from.col] = 'G';
+    } else {
+      newGameState.board[from.row][from.col] = '';
+    }
+
+    // Handle dropped gold display
+    for (const droppedGold of newGameState.droppedGold) {
+      if (newGameState.board[droppedGold.row][droppedGold.col] === '') {
+        newGameState.board[droppedGold.row][droppedGold.col] = 'G';
+      }
+    }
   }
 
   // Handle boss spawning
@@ -281,6 +322,9 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
     newGameState.nextSilkSpawn = newGameState.roundNumber + SILK_SPAWN_INTERVAL;
   }
 
+  // Update buffs and debuffs durations
+  updateBuffsAndDebuffs(newGameState);
+
   // Update game state
   newGameState.currentPlayer = newGameState.currentPlayer === 'TRADER' ? 'THIEF' : 'TRADER';
   newGameState.roundNumber++;
@@ -288,27 +332,86 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
   return newGameState;
 }
 
+function updateBuffsAndDebuffs(gameState: GameState) {
+  // Update player buffs
+  gameState.buffs.TRADER = gameState.buffs.TRADER
+    .map(buff => ({ ...buff, duration: buff.duration - 1 }))
+    .filter(buff => buff.duration > 0);
+
+  gameState.buffs.THIEF = gameState.buffs.THIEF
+    .map(buff => ({ ...buff, duration: buff.duration - 1 }))
+    .filter(buff => buff.duration > 0);
+
+  // Update unit buffs and debuffs
+  const allUnits = [...gameState.traderUnits, ...gameState.thiefUnits];
+  for (const unit of allUnits) {
+    unit.buffs = unit.buffs
+      .map(buff => ({ ...buff, duration: buff.duration - 1 }))
+      .filter(buff => buff.duration > 0);
+
+    unit.debuffs = unit.debuffs
+      .map(debuff => ({ ...debuff, duration: debuff.duration - 1 }))
+      .filter(debuff => debuff.duration > 0);
+
+    // Apply poison DoT damage
+    const poisonDebuff = unit.debuffs.find(d => d.type === 'poison');
+    if (poisonDebuff) {
+      unit.hp -= 1;
+      if (unit.hp <= 0) {
+        removeUnit(gameState, { row: unit.row, col: unit.col });
+        gameState.board[unit.row][unit.col] = '';
+      } else {
+        gameState.board[unit.row][unit.col] = formatUnit(unit);
+      }
+    }
+  }
+}
+
 export function useAbility(gameState: GameState, ability: string, targetPosition?: { row: number, col: number }): GameState {
   const newGameState = { ...gameState };
   const currentPlayer = newGameState.currentPlayer;
-  const unitArray = newGameState.traderUnits;
+  const abilityCost = getAbilityCost(ability);
+
+  // Check if player has enough silk
+  const playerSilk = currentPlayer === 'TRADER' ? newGameState.silkCountTrader : newGameState.silkCountThief;
+  if (playerSilk < abilityCost) {
+    return gameState; // Not enough silk, return unchanged
+  }
 
   switch (ability) {
+    // Trader abilities
     case 'Rush':
       if (currentPlayer === 'TRADER') {
         newGameState.buffs.TRADER.push({ type: 'rush', duration: 1 });
       }
       break;
+
+    case 'Trade':
+      // Swap positions with another Trader
+      if (currentPlayer === 'TRADER' && targetPosition && gameState.selectedUnit) {
+        const trader1 = findUnit(newGameState, gameState.selectedUnit);
+        const trader2 = findUnit(newGameState, targetPosition);
+        if (trader1 && trader2 && trader1.type === 'TR' && trader2.type === 'TR') {
+          // Swap positions
+          const temp = { row: trader1.row, col: trader1.col };
+          trader1.row = trader2.row;
+          trader1.col = trader2.col;
+          trader2.row = temp.row;
+          trader2.col = temp.col;
+          // Update board
+          newGameState.board[trader1.row][trader1.col] = formatUnit(trader1);
+          newGameState.board[trader2.row][trader2.col] = formatUnit(trader2);
+        }
+      }
+      break;
+
+    case 'Shield':
     case 'Shield Wall':
       if (currentPlayer === 'TRADER') {
         newGameState.buffs.TRADER.push({ type: 'damageReduction', duration: 1 });
       }
       break;
-    case 'Fortify':
-      if (currentPlayer === 'TRADER') {
-        newGameState.buffs.TRADER.push({ type: 'fortify', duration: 1 });
-      }
-      break;
+
     case 'Guard':
       if (currentPlayer === 'TRADER' && targetPosition) {
         const hunterUnit = newGameState.traderUnits.find(u => u.type === 'H');
@@ -318,6 +421,7 @@ export function useAbility(gameState: GameState, ability: string, targetPosition
         }
       }
       break;
+
     case 'Track':
       if (currentPlayer === 'TRADER' && targetPosition) {
         const targetUnit = newGameState.thiefUnits.find(u => u.row === targetPosition.row && u.col === targetPosition.col);
@@ -326,11 +430,44 @@ export function useAbility(gameState: GameState, ability: string, targetPosition
         }
       }
       break;
-    case 'Ambush':
-      if (currentPlayer === 'THIEF' && targetPosition) {
-        newGameState.traps.push({ row: targetPosition.row, col: targetPosition.col });
+
+    case 'Fortify':
+      if (currentPlayer === 'TRADER') {
+        newGameState.buffs.TRADER.push({ type: 'fortify', duration: 1 });
       }
       break;
+
+    // Thief abilities
+    case 'Shadowstep':
+    case 'Shadow Step':
+      if (currentPlayer === 'THIEF') {
+        newGameState.buffs.THIEF.push({ type: 'shadowstep', duration: 1 });
+      }
+      break;
+
+    case 'Steal':
+    case 'Steal Silk':
+      if (currentPlayer === 'THIEF' && targetPosition) {
+        // Steal silk from adjacent Trader
+        const distance = Math.abs(targetPosition.row - (gameState.selectedUnit?.row || 0)) +
+                        Math.abs(targetPosition.col - (gameState.selectedUnit?.col || 0));
+        if (distance === 1 && newGameState.silkCountTrader > 0) {
+          newGameState.silkCountTrader--;
+          newGameState.silkCountThief++;
+        }
+      }
+      break;
+
+    case 'Trap':
+    case 'Set Trap':
+    case 'Ambush':
+      if (currentPlayer === 'THIEF' && targetPosition) {
+        // Place trap on adjacent tile
+        newGameState.traps.push({ row: targetPosition.row, col: targetPosition.col });
+        newGameState.board[targetPosition.row][targetPosition.col] = 'X';
+      }
+      break;
+
     case 'Disarm':
       if (currentPlayer === 'THIEF' && targetPosition) {
         const targetUnit = newGameState.traderUnits.find(u => u.row === targetPosition.row && u.col === targetPosition.col);
@@ -340,9 +477,7 @@ export function useAbility(gameState: GameState, ability: string, targetPosition
         }
       }
       break;
-    case 'Shadowstep':
-      // Implement Shadow Step ability (handled in movement logic)
-      break;
+
     case 'Rally':
       if (currentPlayer === 'THIEF') {
         newGameState.buffs.THIEF.push({ type: 'attackBoost', duration: 1 });
@@ -350,8 +485,12 @@ export function useAbility(gameState: GameState, ability: string, targetPosition
       break;
   }
 
-  // Use silk to activate ability
-  newGameState.silkCountTrader -= getAbilityCost(ability);
+  // Deduct silk cost from the correct player
+  if (currentPlayer === 'TRADER') {
+    newGameState.silkCountTrader -= abilityCost;
+  } else {
+    newGameState.silkCountThief -= abilityCost;
+  }
 
   newGameState.lastUsedAbility = ability;
   return newGameState;
@@ -359,21 +498,36 @@ export function useAbility(gameState: GameState, ability: string, targetPosition
 
 function getAbilityCost(ability: string): number {
   switch (ability) {
+    // Trader abilities
     case 'Rush':
+      return 2;
+    case 'Trade':
+      return 3;
+    case 'Shield':
+    case 'Shield Wall':
+      return 3;
+
+    // Thief abilities
+    case 'Shadowstep':
+    case 'Shadow Step':
+      return 2;
+    case 'Steal':
+    case 'Steal Silk':
+      return 3;
+    case 'Trap':
+    case 'Set Trap':
     case 'Ambush':
+      return 2;
+
+    // Other abilities
+    case 'Guard':
+    case 'Track':
     case 'Fortify':
       return 1;
-    case 'Shield Wall':
     case 'Disarm':
-      return 2;
-    case 'Track':
-      return 3;
-    case 'Shadowstep':
-      return 3;
     case 'Rally':
       return 2;
-    case 'Guard':
-      return 1;
+
     default:
       return 0;
   }
@@ -472,7 +626,14 @@ function getCombatModifier(gameState: GameState, unit: Unit): number {
 }
 
 function getDamage(attacker: Unit, defender: Unit): number {
-  return 1; // Hunter always deals 1 damage
+  // Kingthief deals 2 damage to Traders, 1 to Hunters
+  if (attacker.type === 'KT') {
+    if (defender.type === 'TR') return 2;
+    if (defender.type === 'H') return 1;
+  }
+
+  // All other units deal 1 damage
+  return 1;
 }
 
 function parseUnit(unitString: string): Unit {
@@ -596,23 +757,96 @@ function makeNormalAiMove(gameState: GameState, aiUnits: Unit[]): GameState {
     };
   }
 
-  // Prioritize collecting Silk and targeting Traders
-  for (const unit of aiUnits) {
-    const validMoves = getValidMoves(gameState, { row: unit.row, col: unit.col });
-    
-    // Check for Silk collection
-    const silkMove = validMoves.find(move => gameState.board[move.row][move.col] === 'SI');
-    if (silkMove) {
-      return moveUnit(gameState, { row: unit.row, col: unit.col }, silkMove);
+  const isTraderAI = gameState.currentPlayer === 'TRADER';
+
+  if (isTraderAI) {
+    // Trader AI: Focus on collecting gold and delivering it
+    const traders = aiUnits.filter(u => u.type === 'TR');
+    const tradersWithGold = traders.filter(u => u.hasGold);
+    const tradersWithoutGold = traders.filter(u => !u.hasGold);
+
+    // Priority 1: Traders with gold move to delivery zones
+    for (const trader of tradersWithGold) {
+      const validMoves = getValidMoves(gameState, { row: trader.row, col: trader.col });
+      const deliveryMove = validMoves.find(move =>
+        (move.row === 7 && (move.col === 0 || move.col === 1))
+      );
+      if (deliveryMove) {
+        return moveUnit(gameState, { row: trader.row, col: trader.col }, deliveryMove);
+      }
+
+      // Move towards delivery zone
+      const nearestDeliveryZone = { row: 7, col: 0 };
+      const moveTowardsDelivery = validMoves.reduce((best, move) => {
+        const currentDistance = Math.abs(move.row - nearestDeliveryZone.row) + Math.abs(move.col - nearestDeliveryZone.col);
+        const bestDistance = Math.abs(best.row - nearestDeliveryZone.row) + Math.abs(best.col - nearestDeliveryZone.col);
+        return currentDistance < bestDistance ? move : best;
+      });
+      if (validMoves.length > 0) {
+        return moveUnit(gameState, { row: trader.row, col: trader.col }, moveTowardsDelivery);
+      }
     }
 
-    // Check for attacking Traders
-    const attackMove = validMoves.find(move => {
-      const targetCell = gameState.board[move.row][move.col];
-      return targetCell.includes('TR') || targetCell.includes('H');
-    });
-    if (attackMove) {
-      return moveUnit(gameState, { row: unit.row, col: unit.col }, attackMove);
+    // Priority 2: Traders without gold move to gold locations
+    for (const trader of tradersWithoutGold) {
+      const validMoves = getValidMoves(gameState, { row: trader.row, col: trader.col });
+
+      // Check for gold pickup
+      const goldMove = validMoves.find(move => gameState.board[move.row][move.col] === 'G');
+      if (goldMove) {
+        return moveUnit(gameState, { row: trader.row, col: trader.col }, goldMove);
+      }
+
+      // Move towards nearest gold
+      const goldPositions = [
+        ...GOLD_SPAWN_POSITIONS,
+        ...gameState.droppedGold
+      ];
+      if (goldPositions.length > 0) {
+        const nearestGold = goldPositions.reduce((nearest, current) => {
+          const currentDistance = Math.abs(current.row - trader.row) + Math.abs(current.col - trader.col);
+          const nearestDistance = Math.abs(nearest.row - trader.row) + Math.abs(nearest.col - trader.col);
+          return currentDistance < nearestDistance ? current : nearest;
+        });
+
+        const moveTowardsGold = validMoves.reduce((best, move) => {
+          const currentDistance = Math.abs(move.row - nearestGold.row) + Math.abs(move.col - nearestGold.col);
+          const bestDistance = Math.abs(best.row - nearestGold.row) + Math.abs(best.col - nearestGold.col);
+          return currentDistance < bestDistance ? move : best;
+        });
+        if (validMoves.length > 0) {
+          return moveUnit(gameState, { row: trader.row, col: trader.col }, moveTowardsGold);
+        }
+      }
+    }
+
+    // Priority 3: Collect Silk
+    for (const unit of aiUnits) {
+      const validMoves = getValidMoves(gameState, { row: unit.row, col: unit.col });
+      const silkMove = validMoves.find(move => gameState.board[move.row][move.col] === 'SI');
+      if (silkMove) {
+        return moveUnit(gameState, { row: unit.row, col: unit.col }, silkMove);
+      }
+    }
+  } else {
+    // Thief AI: Prioritize collecting Silk and targeting Traders
+    for (const unit of aiUnits) {
+      const validMoves = getValidMoves(gameState, { row: unit.row, col: unit.col });
+
+      // Check for Silk collection
+      const silkMove = validMoves.find(move => gameState.board[move.row][move.col] === 'SI');
+      if (silkMove) {
+        return moveUnit(gameState, { row: unit.row, col: unit.col }, silkMove);
+      }
+
+      // Check for attacking Traders
+      const attackMove = validMoves.find(move => {
+        const targetCell = gameState.board[move.row][move.col];
+        return targetCell.includes('TR') || targetCell.includes('H');
+      });
+      if (attackMove) {
+        return moveUnit(gameState, { row: unit.row, col: unit.col }, attackMove);
+      }
     }
   }
 
@@ -622,12 +856,24 @@ function makeNormalAiMove(gameState: GameState, aiUnits: Unit[]): GameState {
 
 function makeSilkroadAiMove(gameState: GameState, aiUnits: Unit[]): GameState {
   // Aggressively hunt Traders and coordinate attacks
-  const traderPositions = gameState.traderUnits.map(u => ({ row: u.row, col: u.col }));
+  const tradersWithGold = gameState.traderUnits.filter(u => u.type === 'TR' && u.hasGold);
+  const allTraders = gameState.traderUnits;
 
   for (const unit of aiUnits) {
     const validMoves = getValidMoves(gameState, { row: unit.row, col: unit.col });
 
-    // Check for attacking Traders, prioritizing those carrying Gold
+    if (validMoves.length === 0) continue;
+
+    // Priority 1: Attack Traders carrying Gold
+    const attackGoldTrader = validMoves.find(move => {
+      const targetCell = gameState.board[move.row][move.col];
+      return targetCell.includes('TRG') || (targetCell.includes('TR') && targetCell.includes('G'));
+    });
+    if (attackGoldTrader) {
+      return moveUnit(gameState, { row: unit.row, col: unit.col }, attackGoldTrader);
+    }
+
+    // Priority 2: Attack any Trader or Hunter
     const attackMove = validMoves.find(move => {
       const targetCell = gameState.board[move.row][move.col];
       return targetCell.includes('TR') || targetCell.includes('H');
@@ -636,9 +882,30 @@ function makeSilkroadAiMove(gameState: GameState, aiUnits: Unit[]): GameState {
       return moveUnit(gameState, { row: unit.row, col: unit.col }, attackMove);
     }
 
-    // Move towards the nearest Trader
-    if (traderPositions.length > 0) {
-      const nearestTrader = findNearestTrader(unit, traderPositions);
+    // Priority 3: Move towards Traders with Gold
+    if (tradersWithGold.length > 0) {
+      const nearestGoldTrader = tradersWithGold.reduce((nearest, current) => {
+        const currentDistance = Math.abs(current.row - unit.row) + Math.abs(current.col - unit.col);
+        const nearestDistance = Math.abs(nearest.row - unit.row) + Math.abs(nearest.col - unit.col);
+        return currentDistance < nearestDistance ? current : nearest;
+      });
+
+      const moveTowardsGoldTrader = validMoves.reduce((best, move) => {
+        const currentDistance = Math.abs(move.row - nearestGoldTrader.row) + Math.abs(move.col - nearestGoldTrader.col);
+        const bestDistance = Math.abs(best.row - nearestGoldTrader.row) + Math.abs(best.col - nearestGoldTrader.col);
+        return currentDistance < bestDistance ? move : best;
+      });
+      return moveUnit(gameState, { row: unit.row, col: unit.col }, moveTowardsGoldTrader);
+    }
+
+    // Priority 4: Move towards any Trader
+    if (allTraders.length > 0) {
+      const nearestTrader = allTraders.reduce((nearest, current) => {
+        const currentDistance = Math.abs(current.row - unit.row) + Math.abs(current.col - unit.col);
+        const nearestDistance = Math.abs(nearest.row - unit.row) + Math.abs(nearest.col - unit.col);
+        return currentDistance < nearestDistance ? current : nearest;
+      });
+
       const moveTowardsTrader = validMoves.reduce((best, move) => {
         const currentDistance = Math.abs(move.row - nearestTrader.row) + Math.abs(move.col - nearestTrader.col);
         const bestDistance = Math.abs(best.row - nearestTrader.row) + Math.abs(best.col - nearestTrader.col);
@@ -664,45 +931,147 @@ export function handleBossTurn(gameState: GameState): GameState {
   const newGameState = { ...gameState };
 
   for (const boss of newGameState.bossMonsters) {
-    // Find nearby units
-    const nearbyUnits = [...newGameState.traderUnits, ...newGameState.thiefUnits].filter(unit => 
-      Math.abs(unit.row - boss.position.row) <= boss.range && 
-      Math.abs(unit.col - boss.position.col) <= boss.range
-    );
+    const allUnits = [...newGameState.traderUnits, ...newGameState.thiefUnits];
 
-    if (nearbyUnits.length > 0) {
-      // Attack a random nearby unit
-      const targetUnit = nearbyUnits[Math.floor(Math.random() * nearbyUnits.length)];
-      targetUnit.hp -= boss.damage;
+    if (allUnits.length === 0) continue;
 
-      if (targetUnit.hp <= 0) {
-        removeUnit(newGameState, { row: targetUnit.row, col: targetUnit.col });
-        newGameState.board[targetUnit.row][targetUnit.col] = '';
-      } else {
-        newGameState.board[targetUnit.row][targetUnit.col] = formatUnit(targetUnit);
-      }
-    } else {
-      // Move randomly if no units are nearby
-      const validMoves = getValidMoves(newGameState, boss.position);
-      if (validMoves.length > 0) {
-        const newPosition = validMoves[Math.floor(Math.random() * validMoves.length)];
-        newGameState.board[boss.position.row][boss.position.col] = '';
-        boss.position = newPosition;
-        newGameState.board[newPosition.row][newPosition.col] = `BM${boss.type[0]}`;
-      }
+    // Find nearest unit
+    const nearestUnit = allUnits.reduce((nearest, current) => {
+      const currentDistance = Math.abs(current.row - boss.position.row) + Math.abs(current.col - boss.position.col);
+      const nearestDistance = Math.abs(nearest.row - boss.position.row) + Math.abs(nearest.col - boss.position.col);
+      return currentDistance < nearestDistance ? current : nearest;
+    });
+
+    const distanceToNearest = Math.abs(nearestUnit.row - boss.position.row) + Math.abs(nearestUnit.col - boss.position.col);
+
+    // Boss-specific behavior
+    switch (boss.type) {
+      case 'TigerGiry':
+        // AoE damage to all units in 3x3 area
+        if (distanceToNearest <= boss.range) {
+          const unitsInRange = allUnits.filter(unit =>
+            Math.abs(unit.row - boss.position.row) <= 1 &&
+            Math.abs(unit.col - boss.position.col) <= 1
+          );
+
+          for (const unit of unitsInRange) {
+            unit.hp -= boss.damage;
+            if (unit.hp <= 0) {
+              removeUnit(newGameState, { row: unit.row, col: unit.col });
+              newGameState.board[unit.row][unit.col] = '';
+            } else {
+              newGameState.board[unit.row][unit.col] = formatUnit(unit);
+            }
+          }
+        } else {
+          // Move towards nearest unit
+          moveBossTowards(newGameState, boss, nearestUnit);
+        }
+        break;
+
+      case 'SkeletoKing':
+        // Spawn skeleton minions on adjacent tiles
+        if (distanceToNearest <= 2) {
+          spawnSkeletons(newGameState, boss);
+        }
+        break;
+
+      case 'Murucha':
+        // Poison cloud affecting units within 2 tiles (DoT)
+        const unitsInPoisonRange = allUnits.filter(unit => {
+          const distance = Math.abs(unit.row - boss.position.row) + Math.abs(unit.col - boss.position.col);
+          return distance <= 2;
+        });
+
+        for (const unit of unitsInPoisonRange) {
+          unit.debuffs.push({ type: 'poison', duration: 2 });
+          unit.hp -= 1; // Initial poison damage
+          if (unit.hp <= 0) {
+            removeUnit(newGameState, { row: unit.row, col: unit.col });
+            newGameState.board[unit.row][unit.col] = '';
+          } else {
+            newGameState.board[unit.row][unit.col] = formatUnit(unit);
+          }
+        }
+
+        // Move towards nearest unit if not close
+        if (distanceToNearest > 2) {
+          moveBossTowards(newGameState, boss, nearestUnit);
+        }
+        break;
     }
   }
 
   return newGameState;
 }
 
+function moveBossTowards(gameState: GameState, boss: BossMonster, target: Unit) {
+  const possibleMoves = [
+    { row: boss.position.row - 1, col: boss.position.col }, // up
+    { row: boss.position.row + 1, col: boss.position.col }, // down
+    { row: boss.position.row, col: boss.position.col - 1 }, // left
+    { row: boss.position.row, col: boss.position.col + 1 }  // right
+  ];
+
+  // Filter valid moves
+  const validMoves = possibleMoves.filter(move =>
+    move.row >= 0 && move.row < BOARD_SIZE &&
+    move.col >= 0 && move.col < BOARD_SIZE &&
+    gameState.board[move.row][move.col] === ''
+  );
+
+  if (validMoves.length === 0) return;
+
+  // Choose move that gets closest to target
+  const bestMove = validMoves.reduce((best, move) => {
+    const moveDistance = Math.abs(move.row - target.row) + Math.abs(move.col - target.col);
+    const bestDistance = Math.abs(best.row - target.row) + Math.abs(best.col - target.col);
+    return moveDistance < bestDistance ? move : best;
+  });
+
+  // Move boss
+  gameState.board[boss.position.row][boss.position.col] = '';
+  boss.position = bestMove;
+  gameState.board[bestMove.row][bestMove.col] = `BM${boss.type[0]}`;
+}
+
+function spawnSkeletons(gameState: GameState, boss: BossMonster) {
+  const adjacentPositions = [
+    { row: boss.position.row - 1, col: boss.position.col },
+    { row: boss.position.row + 1, col: boss.position.col },
+    { row: boss.position.row, col: boss.position.col - 1 },
+    { row: boss.position.row, col: boss.position.col + 1 }
+  ];
+
+  for (const pos of adjacentPositions) {
+    if (pos.row >= 0 && pos.row < BOARD_SIZE &&
+        pos.col >= 0 && pos.col < BOARD_SIZE &&
+        gameState.board[pos.row][pos.col] === '') {
+      // Spawn skeleton (represented as SK)
+      gameState.board[pos.row][pos.col] = 'SK';
+      // Skeletons are temporary minions with 1 HP
+    }
+  }
+}
+
 export function checkVictoryConditions(gameState: GameState): string | null {
-  if (gameState.goldDelivered === 2) {
+  // Traders win if they deliver 2 Gold pieces to their delivery zones
+  if (gameState.goldDelivered >= 2) {
     return 'TRADER';
   }
-  if (gameState.traderUnits.filter(u => u.type === 'TR').length === 0) {
+
+  // Thieves win if both Trader units are eliminated
+  const traderCount = gameState.traderUnits.filter(u => u.type === 'TR').length;
+  if (traderCount === 0) {
     return 'THIEF';
   }
+
+  // Thieves also win if only the Hunter remains
+  const hunterCount = gameState.traderUnits.filter(u => u.type === 'H').length;
+  if (gameState.traderUnits.length === hunterCount && hunterCount > 0) {
+    return 'THIEF';
+  }
+
   return null;
 }
 
