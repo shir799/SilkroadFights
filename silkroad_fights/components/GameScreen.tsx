@@ -8,6 +8,7 @@ import { DiceRoll } from './DiceRoll'
 import { BossAnnouncement } from './BossAnnouncement'
 import TutorialOverlay from './TutorialOverlay'
 import UnitDetails from './UnitDetails'
+import { ShieldIcon, DaggerIcon, ControllerIcon, HourglassIcon } from './Icons'
 import {
   type GameState,
   initializeGame,
@@ -144,13 +145,27 @@ export default function GameScreen({ gameMode, aiDifficulty, isMuted, setIsMuted
             }}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            <h2 className="text-xl font-bold px-6 py-2 rounded-lg" style={{
+            <h2 className="text-xl font-bold px-6 py-2 rounded-lg flex items-center gap-3 justify-center" style={{
               color: '#FFD700',
               textShadow: '0 0 10px rgba(255, 215, 0, 0.8), 2px 2px 4px rgba(0,0,0,0.8)',
               background: 'linear-gradient(135deg, rgba(139, 69, 19, 0.8), rgba(212, 175, 55, 0.6))',
               border: '2px solid #FFD700'
             }}>
-              {isTraderPlayer ? '🛡️ Spieler (Händler) VS 🗡️ CPU (Dieb)' : '🗡️ Spieler (Dieb) VS 🛡️ CPU (Händler)'}
+              {isTraderPlayer ? (
+                <>
+                  <ShieldIcon className="w-6 h-6" color="#4169E1" />
+                  <span>Spieler (Händler) VS</span>
+                  <DaggerIcon className="w-6 h-6" color="#8B0000" />
+                  <span>CPU (Dieb)</span>
+                </>
+              ) : (
+                <>
+                  <DaggerIcon className="w-6 h-6" color="#8B0000" />
+                  <span>Spieler (Dieb) VS</span>
+                  <ShieldIcon className="w-6 h-6" color="#4169E1" />
+                  <span>CPU (Händler)</span>
+                </>
+              )}
             </h2>
           </motion.div>
         </div>
@@ -163,7 +178,7 @@ export default function GameScreen({ gameMode, aiDifficulty, isMuted, setIsMuted
           key={gameState.currentPlayer}
         >
           <motion.div
-            className="inline-block px-6 py-2 rounded-full font-bold text-lg"
+            className="inline-flex items-center gap-3 px-6 py-2 rounded-full font-bold text-lg"
             style={{
               background: (isTraderPlayer && gameState.currentPlayer === 'TRADER') || (!isTraderPlayer && gameState.currentPlayer === 'THIEF')
                 ? 'linear-gradient(135deg, #00FF00, #32CD32)'
@@ -178,9 +193,19 @@ export default function GameScreen({ gameMode, aiDifficulty, isMuted, setIsMuted
             }}
             transition={{ duration: 1, repeat: Infinity }}
           >
-            {(isTraderPlayer && gameState.currentPlayer === 'TRADER') || (!isTraderPlayer && gameState.currentPlayer === 'THIEF')
-              ? '🎮 DEIN ZUG! 🎮'
-              : '⏳ CPU am Zug... ⏳'}
+            {(isTraderPlayer && gameState.currentPlayer === 'TRADER') || (!isTraderPlayer && gameState.currentPlayer === 'THIEF') ? (
+              <>
+                <ControllerIcon className="w-6 h-6" color="#000" />
+                <span>DEIN ZUG!</span>
+                <ControllerIcon className="w-6 h-6" color="#000" />
+              </>
+            ) : (
+              <>
+                <HourglassIcon className="w-6 h-6" color="#000" />
+                <span>CPU am Zug...</span>
+                <HourglassIcon className="w-6 h-6" color="#000" />
+              </>
+            )}
           </motion.div>
         </motion.div>
 

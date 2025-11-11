@@ -844,37 +844,37 @@ export function updateGameState(gameState: GameState): GameState {
 const BOSS_TEMPLATES: Record<string, Omit<BossMonster, 'position'>> = {
   TigerGiry: {
     type: 'TigerGiry',
-    hp: 5,
-    maxHp: 5,
-    damage: 3,
+    hp: 3,           // Reduced from 5 to 3
+    maxHp: 3,        // Reduced from 5 to 3
+    damage: 1,       // Reduced from 3 to 1
     range: 1,
     movementPattern: 'random',
     rewards: {
-      silk: 2,
+      silk: 3,       // Increased from 2 to 3 for better reward
       buffs: ['speed']
     }
   },
   SkeletoKing: {
     type: 'SkeletoKing',
-    hp: 5,
-    maxHp: 5,
-    damage: 3,
+    hp: 4,           // Reduced from 5 to 4 (tougher than Tiger)
+    maxHp: 4,        // Reduced from 5 to 4
+    damage: 1,       // Reduced from 3 to 1
     range: 1,
     movementPattern: 'stationary',
     rewards: {
-      silk: 0,
+      silk: 2,       // Increased from 0 to 2
       buffs: ['combatRoll']
     }
   },
   Murucha: {
     type: 'Murucha',
-    hp: 5,
-    maxHp: 5,
-    damage: 3,
+    hp: 3,           // Reduced from 5 to 3
+    maxHp: 3,        // Reduced from 5 to 3
+    damage: 2,       // Reduced from 3 to 2 (still dangerous but fair)
     range: 1,
     movementPattern: 'area',
     rewards: {
-      silk: 0,
+      silk: 2,       // Increased from 0 to 2
       buffs: ['heal']
     }
   }

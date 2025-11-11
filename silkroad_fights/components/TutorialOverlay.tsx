@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { theme } from '../lib/theme';
+import { StarIcon, CoinIcon, SwordIcon, TargetIcon, SkullIcon, DaggerIcon, ShieldIcon, GemIcon, LightBulbIcon, ArrowRightIcon } from './Icons';
 
 interface TutorialOverlayProps {
   onComplete: () => void;
@@ -14,31 +15,31 @@ const tutorialSteps = {
     {
       title: "Willkommen Seidenstraßen-Händler!",
       description: "Dein Ziel: Liefere 2 Gold-Einheiten zu den grün markierten GOAL-Zonen am oberen Rand des Spielfelds!",
-      icon: "⭐",
+      icon: <StarIcon className="w-16 h-16" color="#00FF7F" filled />,
       highlight: "Die grünen Zonen sind deine Zielzonen - bringe das Gold dorthin!"
     },
     {
       title: "Gold sammeln",
       description: "Bewege deine Trader (TR) zu den rot markierten GOLD-Zonen am unteren Rand, um Gold aufzunehmen.",
-      icon: "💰",
+      icon: <CoinIcon className="w-16 h-16" />,
       highlight: "Nur Trader können Gold tragen! Hunter (H) können nur kämpfen und beschützen."
     },
     {
       title: "Kämpfen",
       description: "Bewege deine Einheiten auf gegnerische Einheiten, um sie anzugreifen! Jeder Kampf wird durch 3 Würfelwürfe entschieden.",
-      icon: "⚔️",
+      icon: <SwordIcon className="w-16 h-16" color="#FFD700" />,
       highlight: "Best-of-3 Würfelwürfe entscheiden den Kampf. Nutze Abilities für Vorteile!"
     },
     {
       title: "Silk & Abilities",
       description: "Sammle Silk (SI) auf dem Spielfeld und nutze sie für mächtige Abilities wie 'Rush' (2 Felder bewegen) oder 'Shield Wall' (Schadensreduktion).",
-      icon: "🎯",
+      icon: <TargetIcon className="w-16 h-16" color="#FFD700" />,
       highlight: "Jede Ability kostet Silk - sammle genug, um im richtigen Moment zuschlagen zu können!"
     },
     {
       title: "Boss Monster",
       description: "Alle 10 Runden spawnt ein Boss Monster! Besiege ihn für Belohnungen oder weiche ihm aus.",
-      icon: "👹",
+      icon: <SkullIcon className="w-16 h-16" color="#FF4500" />,
       highlight: "Bosse sind gefährlich aber lukrativ - plane deine Strategie!"
     }
   ],
@@ -46,31 +47,31 @@ const tutorialSteps = {
     {
       title: "Willkommen Schatten-Dieb!",
       description: "Dein Ziel: Eliminiere BEIDE Trader bevor sie das Gold liefern können!",
-      icon: "🗡️",
+      icon: <DaggerIcon className="w-16 h-16" color="#8B0000" />,
       highlight: "Die Trader versuchen Gold zu den grünen Zonen zu bringen - verhindere das!"
     },
     {
       title: "Kämpfen",
       description: "Bewege deine Thieves (TH) und deinen Kingthief (KT) auf die Trader, um sie anzugreifen!",
-      icon: "⚔️",
+      icon: <SwordIcon className="w-16 h-16" color="#8B0000" />,
       highlight: "Der Kingthief ist stärker - nutze ihn strategisch!"
     },
     {
       title: "Abilities",
       description: "Nutze 'Shadow Step' um durch Hindernisse zu gehen, 'Set Trap' um Feinde zu immobilisieren oder 'Steal Silk' um Ressourcen zu klauen!",
-      icon: "🎯",
+      icon: <TargetIcon className="w-16 h-16" color="#8B0000" />,
       highlight: "Thieves sind agil und trickreich - spiele schlau!"
     },
     {
       title: "Silk sammeln",
       description: "Sammle Silk (SI) Symbole auf dem Spielfeld um Abilities nutzen zu können.",
-      icon: "💎",
+      icon: <GemIcon className="w-16 h-16" color="#9370DB" />,
       highlight: "Mehr Silk = mehr Abilities = mehr Macht!"
     },
     {
       title: "Boss Monster",
       description: "Alle 10 Runden spawnt ein Boss Monster! Nutze ihn zu deinem Vorteil oder besiege ihn für Belohnungen.",
-      icon: "👹",
+      icon: <SkullIcon className="w-16 h-16" color="#FF4500" />,
       highlight: "Bosse greifen beide Seiten an - nutze das Chaos!"
     }
   ]
@@ -186,7 +187,7 @@ export default function TutorialOverlay({ onComplete, isTraderPlayer }: Tutorial
               }}
             >
               <p className="text-lg text-yellow-50 font-semibold text-center">
-                💡 {step.highlight}
+                <LightBulbIcon className="w-6 h-6 inline mr-2" />{step.highlight}
               </p>
             </motion.div>
 
@@ -223,7 +224,13 @@ export default function TutorialOverlay({ onComplete, isTraderPlayer }: Tutorial
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.6 }}
               >
-                {currentStep < steps.length - 1 ? 'Weiter →' : 'Los gehts! 🎮'}
+                {currentStep < steps.length - 1 ? (
+                  <>
+                    Weiter<ArrowRightIcon className="w-4 h-4 inline ml-1" />
+                  </>
+                ) : (
+                  'Los gehts!'
+                )}
               </motion.button>
             </div>
 
