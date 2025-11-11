@@ -12,6 +12,45 @@ interface GameBoardProps {
   bossMonsters: BossMonster[]
 }
 
+// Define important board positions
+const TRADER_DELIVERY_ZONES = [
+  { row: 7, col: 2 }, // A3
+  { row: 7, col: 5 }  // A6
+];
+
+const THIEF_GOLD_ZONES = [
+  { row: 0, col: 2 }, // H3
+  { row: 0, col: 5 }  // H6
+];
+
+const TRADER_START_POSITIONS = [
+  { row: 7, col: 1 }, // Trader 1: A2
+  { row: 7, col: 6 }, // Trader 2: A7
+  { row: 6, col: 3 }  // Hunter: B4
+];
+
+const THIEF_START_POSITIONS = [
+  { row: 0, col: 1 }, // Thief 1: H2
+  { row: 0, col: 6 }, // Thief 2: H7
+  { row: 1, col: 3 }  // Kingthief: G4
+];
+
+function isTraderDeliveryZone(row: number, col: number): boolean {
+  return TRADER_DELIVERY_ZONES.some(zone => zone.row === row && zone.col === col);
+}
+
+function isThiefGoldZone(row: number, col: number): boolean {
+  return THIEF_GOLD_ZONES.some(zone => zone.row === row && zone.col === col);
+}
+
+function isTraderStartPosition(row: number, col: number): boolean {
+  return TRADER_START_POSITIONS.some(pos => pos.row === row && pos.col === col);
+}
+
+function isThiefStartPosition(row: number, col: number): boolean {
+  return THIEF_START_POSITIONS.some(pos => pos.row === row && pos.col === col);
+}
+
 const GameBoard: React.FC<GameBoardProps> = ({ board, selectedUnit, validMoves, onCellClick, bossMonsters }) => {
   return (
     <div className="grid grid-cols-8 gap-0.5 p-1 rounded-lg aspect-square" style={{ background: 'rgba(26, 15, 15, 0.6)' }}>
@@ -33,7 +72,7 @@ const GameBoard: React.FC<GameBoardProps> = ({ board, selectedUnit, validMoves, 
                 hover:opacity-90 transition-opacity
               `}
               style={{
-                background: getCellBackground(cell, boss),
+                background: getCellBackground(cell, boss, rowIndex, colIndex),
                 border: '1px solid rgba(139, 69, 19, 0.5)',
                 aspectRatio: '1 / 1',
               }}
@@ -42,6 +81,17 @@ const GameBoard: React.FC<GameBoardProps> = ({ board, selectedUnit, validMoves, 
               whileTap={{ scale: 0.95 }}
             >
               <div className="relative w-full h-full flex flex-col items-center justify-center">
+                {/* Zone indicators */}
+                {isTraderDeliveryZone(rowIndex, colIndex) && (
+                  <div className="absolute top-0.5 left-0.5 text-xs font-bold text-green-400 bg-black/50 px-1 rounded z-10">
+                    ⭐ GOAL
+                  </div>
+                )}
+                {isThiefGoldZone(rowIndex, colIndex) && (
+                  <div className="absolute top-0.5 left-0.5 text-xs font-bold text-red-400 bg-black/50 px-1 rounded z-10">
+                    💰 GOLD
+                  </div>
+                )}
                 {renderGamePiece(cell, boss)}
               </div>
               {(currentHp || (boss && !cell.includes('BM'))) && (
@@ -61,12 +111,36 @@ const GameBoard: React.FC<GameBoardProps> = ({ board, selectedUnit, validMoves, 
   )
 }
 
-function getCellBackground(cell: string, boss: BossMonster | undefined): string {
+function getCellBackground(cell: string, boss: BossMonster | undefined, rowIndex: number, colIndex: number): string {
   if (boss) {
-    return 'rgba(255, 165, 0, 0.3)' // Orange tint for boss cells
+    return 'linear-gradient(135deg, rgba(255, 165, 0, 0.4), rgba(255, 69, 0, 0.3))' // Orange gradient for boss cells
   }
-  if (cell.includes('Z')) return 'rgba(255, 215, 0, 0.3)'
-  return 'rgba(26, 15, 15, 0.4)'
+
+  // Trader Delivery Zones - Green glow
+  if (isTraderDeliveryZone(rowIndex, colIndex)) {
+    return 'linear-gradient(135deg, rgba(0, 255, 127, 0.25), rgba(34, 139, 34, 0.2))';
+  }
+
+  // Thief Gold Zones - Red glow
+  if (isThiefGoldZone(rowIndex, colIndex)) {
+    return 'linear-gradient(135deg, rgba(220, 20, 60, 0.25), rgba(139, 0, 0, 0.2))';
+  }
+
+  // Trader Start Positions - Blue tint
+  if (isTraderStartPosition(rowIndex, colIndex)) {
+    return 'rgba(65, 105, 225, 0.15)';
+  }
+
+  // Thief Start Positions - Purple tint
+  if (isThiefStartPosition(rowIndex, colIndex)) {
+    return 'rgba(138, 43, 226, 0.15)';
+  }
+
+  // Gold cells
+  if (cell.includes('Z')) return 'rgba(255, 215, 0, 0.3)';
+
+  // Default
+  return 'rgba(26, 15, 15, 0.4)';
 }
 
 function renderGamePiece(cell: string, boss: BossMonster | undefined) {

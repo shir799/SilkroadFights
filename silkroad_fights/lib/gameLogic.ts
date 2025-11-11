@@ -150,23 +150,27 @@ export function formatUnit(unit: Unit): string {
 export function getValidMoves(gameState: GameState, from: Position): Position[] {
   const validMoves: Position[] = [];
   const unit = gameState.board[from.row][from.col];
-  
+
   // Check if unit is immobilized
   const unitObj = findUnit(gameState, from);
   if (unitObj?.isImmobilized) return [];
 
   // Get base movement range
   let maxDistance = 1; // Default movement of 1 tile
-  
+
+  // Hunter can move 2 tiles by default (according to README)
+  if (unit.includes('H')) maxDistance = 2;
+
   // Check for movement-enhancing abilities
   if (unit.includes('TR') && hasActiveAbility(gameState, 'Rush')) maxDistance = 2;
-  if (unit.includes('TH') && hasActiveAbility(gameState, 'Sprint')) maxDistance = 2;
+  if (unit.includes('TH') && hasActiveAbility(gameState, 'Shadowstep')) maxDistance = 2;
+  if (unit.includes('KT')) maxDistance = 2; // Kingthief also moves 2
 
   // Get valid moves within range
   for (let row = Math.max(0, from.row - maxDistance); row <= Math.min(BOARD_SIZE - 1, from.row + maxDistance); row++) {
     for (let col = Math.max(0, from.col - maxDistance); col <= Math.min(BOARD_SIZE - 1, from.col + maxDistance); col++) {
       if (row === from.row && col === from.col) continue;
-      
+
       const distance = Math.abs(row - from.row) + Math.abs(col - from.col);
       if (distance <= maxDistance && isValidMove(gameState, from, { row, col })) {
         validMoves.push({ row, col });
@@ -210,65 +214,94 @@ export function moveUnit(gameState: GameState, from: Position, to: Position): Ga
   const movingUnit = newGameState.board[from.row][from.col];
   const targetCell = newGameState.board[to.row][to.col];
 
-  // Handle gold pickup
-  if (targetCell === 'Z' && movingUnit.includes('TR')) {
-    const unit = findUnit(newGameState, from);
-    if (unit && !unit.hasGold) {
-      unit.hasGold = true;
-      newGameState.board[to.row][to.col] = formatUnit(unit);
-    }
-  }
+  // Reset combat result
+  newGameState.combatResult = null;
 
-  // Handle gold delivery
-  if (movingUnit.includes('TR') && isDeliveryZone(to)) {
-    const unit = findUnit(newGameState, from);
-    if (unit?.hasGold) {
-      unit.hasGold = false;
-      newGameState.goldDelivered++;
-      newGameState.board[to.row][to.col] = formatUnit(unit);
-    }
-  }
-
-  // Handle combat
+  // Handle combat FIRST - before any other interactions
   if (isEnemyUnit(movingUnit, targetCell)) {
+    console.log('Combat triggered between', movingUnit, 'and', targetCell);
     const combatResult = resolveCombat(newGameState, from, to);
     newGameState.combatResult = combatResult;
 
-    // Handle unit death and gold dropping
-    if (combatResult.defenderHp <= 0) {
-      const defender = findUnit(newGameState, to);
-      if (defender?.hasGold) {
-        newGameState.droppedGold.push({ row: to.row, col: to.col });
-      }
-      removeUnit(newGameState, to);
-    }
-    if (combatResult.attackerHp <= 0) {
+    // Handle combat results
+    if (combatResult.winner === 'defender') {
+      // Defender won - attacker dies
       const attacker = findUnit(newGameState, from);
       if (attacker?.hasGold) {
         newGameState.droppedGold.push({ row: from.row, col: from.col });
+        newGameState.board[from.row][from.col] = 'Z'; // Drop gold on death
+      } else {
+        newGameState.board[from.row][from.col] = '';
       }
-      removeUnit(newGameState, from);
-    }
-  }
-
-  // Handle silk collection
-  if (targetCell === 'SI') {
-    if (gameState.currentPlayer === 'TRADER') {
-      newGameState.silkCountTrader++;
+      removeUnitFromArray(newGameState, from);
+      // Defender stays in place - update HP on board
+      const defender = findUnit(newGameState, to);
+      if (defender) {
+        newGameState.board[to.row][to.col] = formatUnit(defender);
+      }
     } else {
-      newGameState.silkCountThief++;
+      // Attacker won - defender dies
+      const defender = findUnit(newGameState, to);
+      if (defender?.hasGold) {
+        newGameState.droppedGold.push({ row: to.row, col: to.col });
+        // Attacker can pick up dropped gold
+        const attacker = findUnit(newGameState, from);
+        if (attacker && (attacker.type === 'TR' || attacker.type === 'H')) {
+          attacker.hasGold = true;
+        }
+      }
+      removeUnitFromArray(newGameState, to);
+      // Move attacker to defender's position
+      newGameState.board[from.row][from.col] = '';
+      const attacker = findUnit(newGameState, from);
+      if (attacker) {
+        newGameState.board[to.row][to.col] = formatUnit(attacker);
+        updateUnitPosition(newGameState, from, to);
+      }
     }
-  }
+  } else {
+    // No combat - handle other interactions
 
-  // Update board state
-  if (!newGameState.combatResult || newGameState.combatResult.winner === 'attacker') {
+    // Handle silk collection
+    if (targetCell === 'SI') {
+      if (gameState.currentPlayer === 'TRADER') {
+        newGameState.silkCountTrader++;
+      } else {
+        newGameState.silkCountThief++;
+      }
+    }
+
+    // Handle gold pickup
+    if (targetCell === 'Z' && movingUnit.includes('TR')) {
+      const unit = findUnit(newGameState, from);
+      if (unit && !unit.hasGold) {
+        unit.hasGold = true;
+      }
+    }
+
+    // Handle gold delivery
+    if (movingUnit.includes('TR') && isDeliveryZone(to)) {
+      const unit = findUnit(newGameState, from);
+      if (unit?.hasGold) {
+        unit.hasGold = false;
+        newGameState.goldDelivered++;
+      }
+    }
+
+    // Normal movement
     newGameState.board[to.row][to.col] = movingUnit;
     newGameState.board[from.row][from.col] = '';
     updateUnitPosition(newGameState, from, to);
+
+    // Update unit state on board
+    const movedUnit = findUnit(newGameState, to);
+    if (movedUnit) {
+      newGameState.board[to.row][to.col] = formatUnit(movedUnit);
+    }
   }
 
   // Handle boss spawning
-  if (newGameState.roundNumber % BOSS_SPAWN_INTERVAL === 0) {
+  if (newGameState.roundNumber % BOSS_SPAWN_INTERVAL === 0 && newGameState.bossMonsters.length === 0) {
     spawnBoss(newGameState);
   }
 
@@ -472,7 +505,30 @@ function getCombatModifier(gameState: GameState, unit: Unit): number {
 }
 
 function getDamage(attacker: Unit, defender: Unit): number {
-  return 1; // Hunter always deals 1 damage
+  // Base damage by unit type
+  let damage = 1;
+
+  // Kingthief deals 2 damage to Traders, 1 to Hunter
+  if (attacker.type === 'KT') {
+    damage = defender.type === 'TR' ? 2 : 1;
+  }
+
+  // Hunter deals 1 damage to all
+  if (attacker.type === 'H') {
+    damage = 1;
+  }
+
+  // Regular Thieves deal 1 damage
+  if (attacker.type === 'TH') {
+    damage = 1;
+  }
+
+  // Traders deal 1 damage (they're merchants, not warriors)
+  if (attacker.type === 'TR') {
+    damage = 1;
+  }
+
+  return damage;
 }
 
 function parseUnit(unitString: string): Unit {
@@ -528,13 +584,23 @@ function updateUnitPosition(gameState: GameState, from: Position, to: Position) 
 }
 
 function removeUnit(gameState: GameState, position: Position) {
-  const unitArray = gameState.currentPlayer === 'TRADER' ? gameState.traderUnits : gameState.thiefUnits;
-  const unitIndex = unitArray.findIndex(u => u.row === position.row && u.col === position.col);
+  removeUnitFromArray(gameState, position);
+  gameState.board[position.row][position.col] = '';
+}
+
+function removeUnitFromArray(gameState: GameState, position: Position) {
+  // Try to find and remove from trader units
+  let unitIndex = gameState.traderUnits.findIndex(u => u.row === position.row && u.col === position.col);
   if (unitIndex !== -1) {
-    const removedUnit = unitArray.splice(unitIndex, 1)[0];
-    if (removedUnit.hasGold) {
-      gameState.droppedGold.push({ row: position.row, col: position.col });
-    }
+    gameState.traderUnits.splice(unitIndex, 1);
+    return;
+  }
+
+  // Try to find and remove from thief units
+  unitIndex = gameState.thiefUnits.findIndex(u => u.row === position.row && u.col === position.col);
+  if (unitIndex !== -1) {
+    gameState.thiefUnits.splice(unitIndex, 1);
+    return;
   }
 }
 

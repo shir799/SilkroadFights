@@ -1,17 +1,19 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { theme } from '../lib/theme'
 import GameBoard from './GameBoard'
 import { DiceRoll } from './DiceRoll'
 import { BossAnnouncement } from './BossAnnouncement'
+import TutorialOverlay from './TutorialOverlay'
 import UnitDetails from './UnitDetails'
-import { 
-  type GameState, 
-  initializeGame, 
-  makeAiMove, 
-  moveUnit, 
-  getValidMoves, 
+import {
+  type GameState,
+  initializeGame,
+  makeAiMove,
+  moveUnit,
+  getValidMoves,
   useAbility,
   attackBoss,
   updateGameState,
@@ -37,6 +39,7 @@ export default function GameScreen({ gameMode, aiDifficulty, isMuted, setIsMuted
   const [defeatedBoss, setDefeatedBoss] = useState<BossMonster | null>(null);
   const [shownBosses, setShownBosses] = useState<Set<string>>(new Set());
   const [selectedUnitDetails, setSelectedUnitDetails] = useState<Unit | null>(null);
+  const [showTutorial, setShowTutorial] = useState(true);
   const isTraderPlayer = gameMode === 'human_vs_ai_thief';
 
   useEffect(() => {
@@ -129,11 +132,57 @@ export default function GameScreen({ gameMode, aiDifficulty, isMuted, setIsMuted
     <div className="h-screen w-full p-2 relative overflow-hidden flex flex-col">
       <div className="relative z-10 flex-grow flex flex-col">
         <div className="flex justify-center items-center mb-2">
-          {/* <img src={theme.images.logo} alt="Silkroad Fights" className="h-12" /> */}
-          <h2 className="text-xl font-bold text-white">
-            {isTraderPlayer ? 'Player (Trader) VS CPU (Thief)' : 'Player (Thief) VS CPU (Trader)'}
-          </h2>
+          <motion.div
+            className="relative"
+            animate={{
+              scale: [1, 1.05, 1],
+              boxShadow: [
+                '0 0 20px rgba(255, 215, 0, 0.5)',
+                '0 0 40px rgba(255, 215, 0, 0.8)',
+                '0 0 20px rgba(255, 215, 0, 0.5)'
+              ]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <h2 className="text-xl font-bold px-6 py-2 rounded-lg" style={{
+              color: '#FFD700',
+              textShadow: '0 0 10px rgba(255, 215, 0, 0.8), 2px 2px 4px rgba(0,0,0,0.8)',
+              background: 'linear-gradient(135deg, rgba(139, 69, 19, 0.8), rgba(212, 175, 55, 0.6))',
+              border: '2px solid #FFD700'
+            }}>
+              {isTraderPlayer ? '🛡️ Spieler (Händler) VS 🗡️ CPU (Dieb)' : '🗡️ Spieler (Dieb) VS 🛡️ CPU (Händler)'}
+            </h2>
+          </motion.div>
         </div>
+
+        {/* Current Turn Indicator */}
+        <motion.div
+          className="text-center mb-2"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          key={gameState.currentPlayer}
+        >
+          <motion.div
+            className="inline-block px-6 py-2 rounded-full font-bold text-lg"
+            style={{
+              background: (isTraderPlayer && gameState.currentPlayer === 'TRADER') || (!isTraderPlayer && gameState.currentPlayer === 'THIEF')
+                ? 'linear-gradient(135deg, #00FF00, #32CD32)'
+                : 'linear-gradient(135deg, #FF4500, #DC143C)',
+              color: '#000',
+              textShadow: '1px 1px 2px rgba(255, 255, 255, 0.5)',
+              border: '3px solid #FFD700',
+              boxShadow: '0 0 20px rgba(255, 215, 0, 0.6)'
+            }}
+            animate={{
+              scale: [1, 1.1, 1],
+            }}
+            transition={{ duration: 1, repeat: Infinity }}
+          >
+            {(isTraderPlayer && gameState.currentPlayer === 'TRADER') || (!isTraderPlayer && gameState.currentPlayer === 'THIEF')
+              ? '🎮 DEIN ZUG! 🎮'
+              : '⏳ CPU am Zug... ⏳'}
+          </motion.div>
+        </motion.div>
 
         <div className="mb-2 p-2 rounded-lg text-xs" style={{ 
           background: 'linear-gradient(180deg, #FFA500 0%, #8B4513 100%)',
@@ -215,6 +264,13 @@ export default function GameScreen({ gameMode, aiDifficulty, isMuted, setIsMuted
           <BossAnnouncement
             bossType={newBoss.type}
             onClose={() => setNewBoss(null)}
+          />
+        )}
+
+        {showTutorial && (
+          <TutorialOverlay
+            onComplete={() => setShowTutorial(false)}
+            isTraderPlayer={isTraderPlayer}
           />
         )}
 
