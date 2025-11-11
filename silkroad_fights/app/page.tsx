@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import LoginScreen from '../components/LoginScreen'
 import ModeSelectScreen from '../components/ModeSelectScreen'
-import GameScreen from '../components/GameScreen'
+import NewGameScreen from '../components/NewGameScreen'  // UPDATED: Using optimized NewGameScreen
 import { motion, AnimatePresence } from 'framer-motion';
 import IntroAnimation from '../components/IntroAnimation'
 import { BackgroundMusic } from '../components/BackgroundMusic'
@@ -59,9 +59,9 @@ export default function SilkroadChess() {
           {currentScreen === 'login' && <LoginScreen onLogin={handleLogin} />}
           {currentScreen === 'modeSelect' && <ModeSelectScreen onStartGame={handleStartGame} />}
           {currentScreen === 'game' && (
-            <GameScreen 
-              gameMode={gameMode} 
-              aiDifficulty={aiDifficulty} 
+            <NewGameScreen
+              gameMode={gameMode}
+              aiDifficulty={aiDifficulty}
               key={`${gameMode}-${aiDifficulty}`}
               isMuted={isMuted}
               setIsMuted={setIsMuted}

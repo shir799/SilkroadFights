@@ -1,4 +1,5 @@
-import { BossMonster, CombatResult, GameState, Unit, Position } from './types';
+import { BossMonster, CombatResult, Position, GameState, Unit } from './types';
+export type { GameState, Unit } from './types';
 
 export const BOARD_SIZE = 8;
 const SILK_SPAWN_INTERVAL = 3;
@@ -150,14 +151,19 @@ export function formatUnit(unit: Unit): string {
 export function getValidMoves(gameState: GameState, from: Position): Position[] {
   const validMoves: Position[] = [];
   const unit = gameState.board[from.row][from.col];
-  
+
+  // CRITICAL FIX: Validate unit ownership before allowing any moves
+  if (!isUnitOwnedByCurrentPlayer(gameState, from)) {
+    return []; // No valid moves for enemy units
+  }
+
   // Check if unit is immobilized
   const unitObj = findUnit(gameState, from);
   if (unitObj?.isImmobilized) return [];
 
   // Get base movement range
   let maxDistance = 1; // Default movement of 1 tile
-  
+
   // Check for movement-enhancing abilities
   if (unit.includes('TR') && hasActiveAbility(gameState, 'Rush')) maxDistance = 2;
   if (unit.includes('TH') && hasActiveAbility(gameState, 'Sprint')) maxDistance = 2;
@@ -166,7 +172,7 @@ export function getValidMoves(gameState: GameState, from: Position): Position[] 
   for (let row = Math.max(0, from.row - maxDistance); row <= Math.min(BOARD_SIZE - 1, from.row + maxDistance); row++) {
     for (let col = Math.max(0, from.col - maxDistance); col <= Math.min(BOARD_SIZE - 1, from.col + maxDistance); col++) {
       if (row === from.row && col === from.col) continue;
-      
+
       const distance = Math.abs(row - from.row) + Math.abs(col - from.col);
       if (distance <= maxDistance && isValidMove(gameState, from, { row, col })) {
         validMoves.push({ row, col });
@@ -206,6 +212,12 @@ function isValidMove(gameState: GameState, from: Position, to: Position): boolea
 }
 
 export function moveUnit(gameState: GameState, from: Position, to: Position): GameState {
+  // CRITICAL FIX: Double-check unit ownership before allowing move
+  if (!isUnitOwnedByCurrentPlayer(gameState, from)) {
+    console.error('Attempted to move enemy unit!');
+    return gameState; // Return unchanged state
+  }
+
   const newGameState = { ...gameState };
   const movingUnit = newGameState.board[from.row][from.col];
   const targetCell = newGameState.board[to.row][to.col];
@@ -528,7 +540,18 @@ function updateUnitPosition(gameState: GameState, from: Position, to: Position) 
 }
 
 function removeUnit(gameState: GameState, position: Position) {
-  const unitArray = gameState.currentPlayer === 'TRADER' ? gameState.traderUnits : gameState.thiefUnits;
+  // CRITICAL FIX: Find and remove unit from correct array based on unit type, not current player
+  const cell = gameState.board[position.row][position.col];
+
+  let unitArray: Unit[];
+  if (cell.includes('TR') || cell.includes('H')) {
+    unitArray = gameState.traderUnits;
+  } else if (cell.includes('TH') || cell.includes('KT')) {
+    unitArray = gameState.thiefUnits;
+  } else {
+    return; // Not a unit
+  }
+
   const unitIndex = unitArray.findIndex(u => u.row === position.row && u.col === position.col);
   if (unitIndex !== -1) {
     const removedUnit = unitArray.splice(unitIndex, 1)[0];
@@ -836,5 +859,20 @@ function isEnemyUnit(attacker: string, defender: string): boolean {
 
 function countSilkOnBoard(board: string[][]): number {
   return board.flat().filter(cell => cell === 'SI').length;
+}
+
+/**
+ * CRITICAL SECURITY: Validates that a unit belongs to the current player
+ * Prevents players from moving enemy units
+ */
+function isUnitOwnedByCurrentPlayer(gameState: GameState, position: Position): boolean {
+  const unit = gameState.board[position.row][position.col];
+  if (!unit) return false;
+
+  if (gameState.currentPlayer === 'TRADER') {
+    return unit.includes('TR') || unit.includes('H');
+  } else {
+    return unit.includes('TH') || unit.includes('KT');
+  }
 }
 

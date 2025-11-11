@@ -6,8 +6,8 @@ import { theme } from '../lib/theme'
 import { HealthBar } from './HealthBar'
 
 interface DiceRollProps {
-  attackRoll: number
-  defenseRoll: number
+  attackRoll: number | number[]  // FIXED: Handle both single and array values
+  defenseRoll: number | number[] // FIXED: Handle both single and array values
   attacker: string
   defender: string
   attackerHp: number
@@ -15,19 +15,23 @@ interface DiceRollProps {
   onComplete: () => void
 }
 
-export function DiceRoll({ 
-  attackRoll, 
-  defenseRoll, 
-  attacker, 
-  defender, 
+export function DiceRoll({
+  attackRoll,
+  defenseRoll,
+  attacker,
+  defender,
   attackerHp,
   defenderHp,
-  onComplete 
+  onComplete
 }: DiceRollProps) {
   const [showRoll, setShowRoll] = useState(true)
   const [currentRoll, setCurrentRoll] = useState({ attack: 1, defense: 1 })
   const [showResult, setShowResult] = useState(false)
   const [currentHp, setCurrentHp] = useState({ attacker: attackerHp, defender: defenderHp })
+
+  // FIXED: Calculate final roll values from arrays or single values
+  const finalAttackRoll = Array.isArray(attackRoll) ? attackRoll[attackRoll.length - 1] : attackRoll;
+  const finalDefenseRoll = Array.isArray(defenseRoll) ? defenseRoll[defenseRoll.length - 1] : defenseRoll;
 
   useEffect(() => {
     let rollInterval: NodeJS.Timeout;
@@ -37,7 +41,7 @@ export function DiceRoll({
 
     rollInterval = setInterval(() => {
       elapsed += rollSpeed;
-      
+
       // Random rolls during animation
       setCurrentRoll({
         attack: Math.floor(Math.random() * 6) + 1,
@@ -48,15 +52,15 @@ export function DiceRoll({
       if (elapsed >= animationDuration - rollSpeed) {
         clearInterval(rollInterval);
         setCurrentRoll({
-          attack: attackRoll,
-          defense: defenseRoll
+          attack: finalAttackRoll,
+          defense: finalDefenseRoll
         });
-        
+
         setTimeout(() => {
           setShowRoll(false);
           setShowResult(true);
           // Animate HP change
-          if (attackRoll > defenseRoll) {
+          if (finalAttackRoll > finalDefenseRoll) {
             setCurrentHp(prev => ({
               ...prev,
               defender: defenderHp
@@ -72,7 +76,7 @@ export function DiceRoll({
     }, rollSpeed);
 
     return () => clearInterval(rollInterval);
-  }, [attackRoll, defenseRoll, attackerHp, defenderHp, onComplete]);
+  }, [finalAttackRoll, finalDefenseRoll, attackerHp, defenderHp, onComplete]);
 
   const getUnitImage = (unitType: string) => {
     if (unitType.includes('TR')) return theme.images.trader;

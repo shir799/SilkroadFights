@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { memo, useMemo } from 'react'
 import { theme } from '../lib/theme'
 import { HealthBar } from './HealthBar'
 import { motion } from 'framer-motion';
@@ -12,53 +12,106 @@ interface GameBoardProps {
   bossMonsters: BossMonster[]
 }
 
+// Performance: Memoized individual cell component
+const GameCell = memo(({
+  cell,
+  rowIndex,
+  colIndex,
+  isValidMove,
+  boss,
+  onClick
+}: {
+  cell: string
+  rowIndex: number
+  colIndex: number
+  isValidMove: boolean
+  boss: BossMonster | undefined
+  onClick: () => void
+}) => {
+  const maxHp = cell.includes('H') || cell.includes('KT') || cell.includes('TH') ? 3 : 2;
+  const [unitType, currentHp] = cell.split(/(\d+)/);
+  const displayHp = parseInt(currentHp) || maxHp;
+
+  return (
+    <motion.div
+      className={`
+        relative flex items-center justify-center
+        ${isValidMove ? 'ring-1 ring-green-400' : ''}
+        hover:opacity-90 transition-opacity
+      `}
+      style={{
+        background: getCellBackground(cell, boss),
+        border: '1px solid rgba(139, 69, 19, 0.5)',
+        aspectRatio: '1 / 1',
+      }}
+      onClick={onClick}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <div className="relative w-full h-full flex flex-col items-center justify-center">
+        {renderGamePiece(cell, boss)}
+      </div>
+      {(currentHp || (boss && !cell.includes('BM'))) && (
+        <div className="absolute bottom-0 left-0 right-0 px-0.5">
+          <HealthBar
+            currentHp={boss ? boss.hp : displayHp}
+            maxHp={boss ? boss.maxHp : maxHp}
+            showPercentage
+          />
+        </div>
+      )}
+    </motion.div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison for performance optimization
+  return prevProps.cell === nextProps.cell &&
+         prevProps.isValidMove === nextProps.isValidMove &&
+         prevProps.boss?.hp === nextProps.boss?.hp;
+});
+
+GameCell.displayName = 'GameCell';
+
 const GameBoard: React.FC<GameBoardProps> = ({ board, selectedUnit, validMoves, onCellClick, bossMonsters }) => {
+  // Performance: Memoize boss lookup map
+  const bossMap = useMemo(() => {
+    const map = new Map<string, BossMonster>();
+    bossMonsters.forEach(boss => {
+      map.set(`${boss.position.row}-${boss.position.col}`, boss);
+    });
+    return map;
+  }, [bossMonsters]);
+
+  // Performance: Memoize valid moves set for O(1) lookup
+  const validMovesSet = useMemo(() => {
+    const set = new Set<string>();
+    validMoves.forEach(move => {
+      set.add(`${move.row}-${move.col}`);
+    });
+    return set;
+  }, [validMoves]);
   return (
     <div className="grid grid-cols-8 gap-0.5 p-1 rounded-lg aspect-square" style={{ background: 'rgba(26, 15, 15, 0.6)' }}>
       {board.map((row, rowIndex) =>
         row.map((cell, colIndex) => {
-          const isValidMove = validMoves.some(move => move.row === rowIndex && move.col === colIndex)
-          const maxHp = cell.includes('H') || cell.includes('KT') || cell.includes('TH') ? 3 : 2
-          const [unitType, currentHp] = cell.split(/(\d+)/)
-          const displayHp = parseInt(currentHp) || maxHp
+          const key = `${rowIndex}-${colIndex}`;
+          const isValidMove = validMovesSet.has(key);
+          const boss = bossMap.get(key);
 
-          const boss = bossMonsters.find(b => b.position.row === rowIndex && b.position.col === colIndex);
-          
           return (
-            <motion.div
-              key={`${rowIndex}-${colIndex}`}
-              className={`
-                relative flex items-center justify-center
-                ${isValidMove ? 'ring-1 ring-green-400' : ''}
-                hover:opacity-90 transition-opacity
-              `}
-              style={{
-                background: getCellBackground(cell, boss),
-                border: '1px solid rgba(139, 69, 19, 0.5)',
-                aspectRatio: '1 / 1',
-              }}
+            <GameCell
+              key={key}
+              cell={cell}
+              rowIndex={rowIndex}
+              colIndex={colIndex}
+              isValidMove={isValidMove}
+              boss={boss}
               onClick={() => onCellClick(rowIndex, colIndex)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <div className="relative w-full h-full flex flex-col items-center justify-center">
-                {renderGamePiece(cell, boss)}
-              </div>
-              {(currentHp || (boss && !cell.includes('BM'))) && (
-                <div className="absolute bottom-0 left-0 right-0 px-0.5">
-                  <HealthBar 
-                    currentHp={boss ? boss.hp : displayHp} 
-                    maxHp={boss ? boss.maxHp : maxHp}
-                    showPercentage
-                  />
-                </div>
-              )}
-            </motion.div>
-          )
+            />
+          );
         })
       )}
     </div>
-  )
+  );
 }
 
 function getCellBackground(cell: string, boss: BossMonster | undefined): string {
