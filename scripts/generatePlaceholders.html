@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Silkroad Fights - Placeholder Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group label {
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .control-group select,
+        .control-group input {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        .control-group input[type="color"] {
+            height: 50px;
+            cursor: pointer;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn-generate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .preview-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .preview-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+
+        .preview-card h3 {
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        #canvas {
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            max-width: 100%;
+            height: auto;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .instructions h2 {
+            margin-bottom: 15px;
+        }
+
+        .instructions ul {
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .quick-presets {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .preset-btn {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Placeholder Generator</h1>
+            <p>Generate custom placeholder sprites for Silkroad Fights</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="assetType">Asset Type:</label>
+                    <select id="assetType">
+                        <option value="unit">Unit</option>
+                        <option value="boss">Boss</option>
+                        <option value="icon">Icon</option>
+                        <option value="item">Item</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="unitType">Unit Type:</label>
+                    <select id="unitType">
+                        <option value="TRADER">Trader</option>
+                        <option value="HUNTER">Hunter</option>
+                        <option value="THIEF">Thief</option>
+                        <option value="KINGTHIEF">King Thief</option>
+                        <option value="CUSTOM">Custom</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="size">Size:</label>
+                    <select id="size">
+                        <option value="64">64x64 (Small)</option>
+                        <option value="128" selected>128x128 (Medium)</option>
+                        <option value="256">256x256 (Large)</option>
+                        <option value="512">512x512 (XL)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-row">
+                <div class="control-group">
+                    <label for="color1">Primary Color:</label>
+                    <input type="color" id="color1" value="#FFA500">
+                </div>
+
+                <div class="control-group">
+                    <label for="color2">Secondary Color:</label>
+                    <input type="color" id="color2" value="#8B4513">
+                </div>
+
+                <div class="control-group">
+                    <label for="text">Label Text:</label>
+                    <input type="text" id="text" value="TR" maxlength="3">
+                </div>
+
+                <div class="control-group">
+                    <label for="shape">Shape:</label>
+                    <select id="shape">
+                        <option value="circle">Circle</option>
+                        <option value="square" selected>Square</option>
+                        <option value="hexagon">Hexagon</option>
+                        <option value="diamond">Diamond</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="quick-presets">
+                <strong>Quick Presets:</strong>
+                <button class="preset-btn" onclick="loadPreset('trader')">🏪 Trader</button>
+                <button class="preset-btn" onclick="loadPreset('hunter')">🏹 Hunter</button>
+                <button class="preset-btn" onclick="loadPreset('thief')">🗡️ Thief</button>
+                <button class="preset-btn" onclick="loadPreset('kingthief')">👑 King Thief</button>
+                <button class="preset-btn" onclick="loadPreset('boss')">👹 Boss</button>
+            </div>
+
+            <div class="buttons">
+                <button class="btn-generate" onclick="generatePlaceholder()">✨ Generate</button>
+                <button class="btn-download" onclick="downloadImage()">💾 Download PNG</button>
+                <button class="btn-clear" onclick="clearCanvas()">🗑️ Clear</button>
+            </div>
+        </div>
+
+        <div class="preview-section">
+            <div class="preview-card">
+                <h3>Preview</h3>
+                <canvas id="canvas" width="256" height="256"></canvas>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h2>📚 Instructions</h2>
+            <ul>
+                <li><strong>Choose Asset Type:</strong> Select whether you're making a unit, boss, icon, or item</li>
+                <li><strong>Select Unit Type:</strong> Pick from predefined units or create a custom one</li>
+                <li><strong>Customize Colors:</strong> Use the color pickers to match your game's theme</li>
+                <li><strong>Set Size:</strong> Choose resolution based on your needs (128x128 recommended)</li>
+                <li><strong>Add Label:</strong> Type 1-3 characters to identify the asset</li>
+                <li><strong>Pick Shape:</strong> Select the background shape style</li>
+                <li><strong>Generate:</strong> Click "Generate" to create your placeholder</li>
+                <li><strong>Download:</strong> Save as PNG and add to your project's assets folder</li>
+            </ul>
+
+            <h2 style="margin-top: 20px;">🎨 Color Schemes</h2>
+            <div class="quick-presets">
+                <strong>Suggested Colors:</strong>
+                <span style="background: linear-gradient(to right, #FFA500, #8B4513); padding: 5px 10px; border-radius: 5px;">Traders (Gold/Brown)</span>
+                <span style="background: linear-gradient(to right, #4169E1, #1E3A8A); padding: 5px 10px; border-radius: 5px;">Hunter (Blue)</span>
+                <span style="background: linear-gradient(to right, #8B008B, #4B0082); padding: 5px 10px; border-radius: 5px;">Thieves (Purple)</span>
+                <span style="background: linear-gradient(to right, #DC143C, #8B0000); padding: 5px 10px; border-radius: 5px;">King Thief (Red)</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        const presets = {
+            trader: { color1: '#FFA500', color2: '#8B4513', text: 'TR', unitType: 'TRADER' },
+            hunter: { color1: '#4169E1', color2: '#1E3A8A', text: 'H', unitType: 'HUNTER' },
+            thief: { color1: '#8B008B', color2: '#4B0082', text: 'TH', unitType: 'THIEF' },
+            kingthief: { color1: '#DC143C', color2: '#8B0000', text: 'KT', unitType: 'KINGTHIEF' },
+            boss: { color1: '#FF4500', color2: '#8B0000', text: '👹', unitType: 'CUSTOM' }
+        };
+
+        function loadPreset(type) {
+            const preset = presets[type];
+            if (preset) {
+                document.getElementById('color1').value = preset.color1;
+                document.getElementById('color2').value = preset.color2;
+                document.getElementById('text').value = preset.text;
+                document.getElementById('unitType').value = preset.unitType;
+                generatePlaceholder();
+            }
+        }
+
+        function generatePlaceholder() {
+            const size = parseInt(document.getElementById('size').value);
+            const color1 = document.getElementById('color1').value;
+            const color2 = document.getElementById('color2').value;
+            const text = document.getElementById('text').value;
+            const shape = document.getElementById('shape').value;
+
+            canvas.width = size;
+            canvas.height = size;
+
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+
+            // Create gradient
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, color1);
+            gradient.addColorStop(1, color2);
+
+            // Draw shape
+            ctx.fillStyle = gradient;
+            drawShape(shape, size);
+
+            // Add glow effect
+            ctx.shadowColor = color1;
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Draw text
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `bold ${size * 0.4}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, size / 2, size / 2);
+
+            // Add border
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = size * 0.05;
+            drawShape(shape, size);
+            ctx.stroke();
+        }
+
+        function drawShape(shape, size) {
+            const padding = size * 0.1;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = (size - padding * 2) / 2;
+
+            ctx.beginPath();
+
+            switch(shape) {
+                case 'circle':
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    break;
+
+                case 'square':
+                    ctx.roundRect(padding, padding, size - padding * 2, size - padding * 2, size * 0.1);
+                    break;
+
+                case 'hexagon':
+                    const angle = Math.PI / 3;
+                    for(let i = 0; i < 6; i++) {
+                        const x = centerX + radius * Math.cos(angle * i);
+                        const y = centerY + radius * Math.sin(angle * i);
+                        if(i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    break;
+
+                case 'diamond':
+                    ctx.moveTo(centerX, padding);
+                    ctx.lineTo(size - padding, centerY);
+                    ctx.lineTo(centerX, size - padding);
+                    ctx.lineTo(padding, centerY);
+                    ctx.closePath();
+                    break;
+            }
+
+            ctx.fill();
+        }
+
+        function downloadImage() {
+            const unitType = document.getElementById('unitType').value;
+            const filename = `${unitType.toLowerCase()}-placeholder.png`;
+
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Generate initial preview
+        generatePlaceholder();
+    </script>
+</body>
+</html>
