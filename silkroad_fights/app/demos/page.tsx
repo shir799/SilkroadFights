@@ -36,11 +36,19 @@ export default function DemosHub() {
     },
     {
       id: 'tft',
-      title: '🎮 TFT Game',
-      description: 'Full TFT-style game with shop, bench, board, and all systems integrated',
-      link: '/',
+      title: '🎮 TFT AUTO-BATTLER',
+      description: 'REAL TFT auto-battler! Buy units, arrange board, watch auto-combat, earn gold & level up!',
+      link: '/tft',
       color: 'from-blue-600 to-blue-800',
-      features: ['Complete Game', 'All Systems', 'CSS Placeholders', 'Ready to Play']
+      features: ['Auto Combat', 'Shop System', 'Level & XP', 'TRUE TFT!']
+    },
+    {
+      id: 'original',
+      title: '♟️ Original Game',
+      description: 'Turn-based Silkroad chess game (the original game)',
+      link: '/',
+      color: 'from-green-600 to-green-800',
+      features: ['Turn-based', 'Trader vs Thief', 'Boss System', 'Original']
     }
   ]
 
