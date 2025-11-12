@@ -97,10 +97,18 @@ export default function TFTGameScreen({ gameMode, aiDifficulty }: TFTGameScreenP
   }
 
   const buyUnit = (unit: ShopUnit) => {
-    if (gold >= unit.cost) {
+    if (gold >= unit.cost && bench.length < 8) {
       setGold(gold - unit.cost)
-      // Add unit to bench (implementation depends on your game logic)
-      console.log('Bought unit:', unit)
+      setBench([...bench, { ...unit, stars: 1 }])
+      setShopUnits(shopUnits.filter(u => u.id !== unit.id))
+    }
+  }
+
+  const handleAbilityUse = (ability: string) => {
+    if (!gameState) return
+    const newState = useAbility(gameState, ability)
+    if (newState !== gameState) {
+      setGameState(prevState => updateGameState(newState))
     }
   }
 
@@ -275,7 +283,7 @@ export default function TFTGameScreen({ gameMode, aiDifficulty }: TFTGameScreenP
                   className="w-full p-2 rounded-lg bg-gradient-to-r from-purple-600 to-purple-800 text-white font-bold text-xs flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => useAbility(gameState, ability.name)}
+                  onClick={() => handleAbilityUse(ability.name)}
                   disabled={
                     gamePhase !== 'combat' ||
                     (isTraderPlayer && gameState.silkCountTrader < ability.cost) ||

@@ -38,7 +38,13 @@ export default function SilkroadChess() {
            backgroundPosition: 'center'
          }}>
       <BackgroundMusic isMuted={isMuted} volume={volume} />
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <a
+          href="/demos"
+          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-700 hover:to-purple-900 text-white font-bold rounded-lg shadow-xl transition-all hover:scale-105"
+        >
+          🎮 Demos
+        </a>
         <SoundControl
           isMuted={isMuted}
           setIsMuted={setIsMuted}

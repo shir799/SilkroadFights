@@ -148,9 +148,17 @@ export default function BattleDemo() {
       >
         <div className="bg-gradient-to-r from-amber-600 to-amber-800 rounded-lg p-4 border-2 border-amber-400 shadow-2xl">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-1">⚔️ BATTLE DEMO</h1>
-              <p className="text-amber-100 text-sm">Test combat system, bosses, and CSS placeholders</p>
+            <div className="flex items-center gap-4">
+              <a
+                href="/demos"
+                className="px-3 py-2 bg-white/20 hover:bg-white/30 text-white font-bold rounded-lg transition-all"
+              >
+                ← Demos
+              </a>
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-1">⚔️ BATTLE DEMO</h1>
+                <p className="text-amber-100 text-sm">Test combat system, bosses, and CSS placeholders</p>
+              </div>
             </div>
             <div className="flex gap-2">
               <motion.button
